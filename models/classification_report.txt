@@ -1,0 +1,20 @@
+                     precision    recall  f1-score   support
+
+    abrahan_cansado       0.76      0.69      0.72        32
+    abrahan_enojado       0.76      0.81      0.79        32
+      abrahan_feliz       0.88      0.66      0.75        32
+  abrahan_pensativo       0.94      0.94      0.94        32
+     abrahan_riendo       0.85      0.91      0.88        32
+abrahan_sorprendido       0.70      0.81      0.75        32
+     abrahan_triste       0.79      0.81      0.80        32
+      jesus_cansado       1.00      1.00      1.00        32
+      jesus_enojado       1.00      1.00      1.00        32
+        jesus_feliz       0.89      0.97      0.93        32
+    jesus_pensativo       1.00      1.00      1.00        32
+       jesus_riendo       1.00      0.94      0.97        32
+  jesus_sorprendido       0.97      1.00      0.98        32
+       jesus_triste       1.00      0.97      0.98        32
+
+           accuracy                           0.89       448
+          macro avg       0.90      0.89      0.89       448
+       weighted avg       0.90      0.89      0.89       448

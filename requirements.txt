@@ -1,0 +1,15 @@
+# Dependencias principales
+tensorflow>=2.10.0
+opencv-python>=4.5.0
+pillow>=8.0.0
+numpy<2.0.0
+requests>=2.25.0
+loguru>=0.6.0
+
+# Interfaz
+tkinter
+
+# Procesamiento de imágenes y análisis
+matplotlib>=3.5.0
+seaborn>=0.11.0
+scikit-learn>=1.0.0 

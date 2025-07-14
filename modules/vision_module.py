@@ -136,10 +136,10 @@ class VisionModule:
                 # Determinar usuario basado en la clase predicha
                 if "abrahan" in predicted_class.lower():
                     user_id = "user_a"
-                    user_name = "Abraham"
+                    user_name = "Abrahan"
                 elif "jesus" in predicted_class.lower():
                     user_id = "user_b"
-                    user_name = "Jesús"
+                    user_name = "Jesus"
                 else:
                     user_id = "user_a"
                     user_name = "Desconocido"
@@ -181,10 +181,10 @@ class VisionModule:
                 # Determinar usuario basado en la clase predicha
                 if "abrahan" in predicted_class.lower():
                     user_id = "user_a"
-                    user_name = "Abraham"
+                    user_name = "Abrahan"
                 elif "jesus" in predicted_class.lower():
                     user_id = "user_b"
-                    user_name = "Jesús"
+                    user_name = "Jesus"
                 else:
                     user_id = "user_a"
                     user_name = "Desconocido"

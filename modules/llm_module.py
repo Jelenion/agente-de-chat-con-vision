@@ -92,7 +92,7 @@ Asistente:"""
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                timeout=20
+                timeout=60
             )
             if response.status_code == 200:
                 result = response.json()
@@ -119,6 +119,50 @@ Asistente:"""
         except Exception as e:
             self.logger.error(f"Error al generar respuesta: {e}")
             return {"success": False, "error": str(e), "response": "[Ocurrió un error inesperado al generar la respuesta.]"}
+    
+    def generate_response_stream(self, user_id: str, emotion: str, message: str, conversation_history: List[Dict] = None):
+        """
+        Genera una respuesta usando el modelo de Ollama en modo streaming (fragmento a fragmento)
+        """
+        try:
+            if conversation_history is None:
+                conversation_history = []
+            prompt = self._create_prompt(user_id, emotion, message, conversation_history)
+            payload = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream": True,
+                "options": {
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                    "max_tokens": 500
+                }
+            }
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                stream=True,
+                timeout=120
+            )
+            if response.status_code == 200:
+                for line in response.iter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line.decode('utf-8'))
+                            fragment = data.get("response", "")
+                            if fragment:
+                                yield fragment
+                        except Exception as e:
+                            self.logger.error(f"Error procesando fragmento de streaming: {e}")
+            else:
+                self.logger.error(f"Error en Ollama API (stream): {response.status_code}")
+                yield f"[No se pudo obtener respuesta del modelo. Código: {response.status_code}]"
+        except requests.Timeout:
+            self.logger.error("Timeout al esperar respuesta del modelo LLM (stream).")
+            yield "[El modelo tardó demasiado en responder. Intenta de nuevo más tarde.]"
+        except Exception as e:
+            self.logger.error(f"Error al generar respuesta (stream): {e}")
+            yield "[Ocurrió un error inesperado al generar la respuesta (stream).]"
     
     def get_available_models(self) -> List[str]:
         """

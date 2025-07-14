@@ -18,12 +18,12 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:latest")
 # Configuración de usuarios
 USERS = {
     "user_a": {
-        "name": "Abraham",
+        "name": "Abrahan",
         "prompt_template": "Eres un asistente amigable y profesional. El usuario es {user_name}. Responde de manera cordial y útil.",
         "personality": "profesional"
     },
     "user_b": {
-        "name": "Jesús", 
+        "name": "Jesus", 
         "prompt_template": "Eres un asistente creativo y dinámico. El usuario es {user_name}. Responde de manera creativa y entusiasta.",
         "personality": "creativo"
     }
@@ -31,6 +31,5 @@ USERS = {
 
 # Configuración de emociones
 EMOTIONS = [
-    "feliz", "triste", "enojado", "sorprendido", 
-    "neutral", "asustado", "disgustado"
+    "cansado", "enojado", "feliz", "pensativo", "riendo", "sorprendido", "triste"
 ] 

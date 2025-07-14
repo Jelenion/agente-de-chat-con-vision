@@ -1,9 +1,8 @@
 """
 Módulo de visión que usa CNN local para detectar emociones
-Basado en el código de Google Colab del usuario
+Basado en el código de Google Colab
 """
 import os
-import cv2
 import numpy as np
 from PIL import Image
 from tensorflow.keras.models import load_model
@@ -11,7 +10,7 @@ from tensorflow.keras.preprocessing.image import img_to_array
 from loguru import logger
 from typing import Dict
 
-from config import USERS
+from config import USERS, EMOTIONS
 
 class VisionModule:
     """
@@ -170,6 +169,15 @@ class VisionModule:
                 predicted_class = result["emotion"]
                 confidence = result["confidence"]
                 
+                # Extraer emoción real (puede venir como 'abrahan_feliz', 'jesus_triste', etc.)
+                emotion_found = None
+                for emo in EMOTIONS:
+                    if emo in predicted_class.lower():
+                        emotion_found = emo
+                        break
+                if not emotion_found:
+                    emotion_found = "emoción desconocida"
+                
                 # Determinar usuario basado en la clase predicha
                 if "abrahan" in predicted_class.lower():
                     user_id = "user_a"
@@ -185,7 +193,7 @@ class VisionModule:
                     "user_id": user_id,
                     "user_name": user_name,
                     "user_confidence": confidence,
-                    "emotion": predicted_class,
+                    "emotion": emotion_found,
                     "emotion_confidence": confidence,
                     "success": True
                 }

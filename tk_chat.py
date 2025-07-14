@@ -29,8 +29,8 @@ class VisionAgentChat:
         
         # Variables
         self.current_image_path = None
-        self.current_emotion = "neutral"
-        self.current_user = "user_a"
+        self.current_emotion = None  # No emoción al inicio
+        self.current_user = None     # No usuario al inicio
         self.conversation_history = []
         
         # Crear interfaz
@@ -215,30 +215,26 @@ class VisionAgentChat:
             print(f"Error completo: {traceback.format_exc()}")
     
     def start_conversation(self):
-        """Iniciar la conversación con el modelo"""
-        welcome_message = "¡Hola! Soy tu agente de visión. Puedo detectar emociones en imágenes y mantener conversaciones inteligentes. ¿En qué puedo ayudarte hoy?"
-        
+        """Iniciar la conversación con saludo genérico"""
+        welcome_message = "¡Hola! Soy tu agente conversacional. Puedes escribirme o subir una imagen para personalizar la conversación."
         self.add_to_chat(welcome_message, "assistant")
-        
-        # Generar primera respuesta del modelo
-        self.generate_model_response()
     
     def generate_model_response(self):
         """Generar respuesta automática del modelo"""
         try:
+            # Solo generar respuesta si hay usuario y emoción detectados
+            if not self.current_user or not self.current_emotion:
+                return
             # Crear contexto para el modelo
             context = f"El usuario está en estado emocional: {self.current_emotion}"
-            
             response = self.llm_module.generate_response(
                 user_id=self.current_user,
                 emotion=self.current_emotion,
                 message=context,
                 conversation_history=self.conversation_history
             )
-            
             if response["success"]:
                 self.add_to_chat(response["response"], "assistant")
-                
                 # Agregar a historial
                 self.conversation_history.append({
                     "user_message": context,
@@ -248,34 +244,29 @@ class VisionAgentChat:
                 })
             else:
                 self.add_to_chat(f"❌ Error del modelo: {response.get('error', 'Error desconocido')}", "error")
-                
         except Exception as e:
             self.add_to_chat(f"❌ Error: {str(e)}", "error")
     
     def send_message(self, event=None):
         """Enviar mensaje de texto"""
         message = self.text_input.get().strip()
-        
         if message:
             # Agregar mensaje del usuario
             timestamp = datetime.now().strftime("%H:%M")
             self.add_to_chat(f"[{timestamp}] Tú: {message}", "user")
-            
             # Limpiar campo de texto
             self.text_input.delete(0, tk.END)
-            
             # Generar respuesta del modelo
             try:
+                # Si no hay usuario/emoción, enviar como conversación genérica
                 response = self.llm_module.generate_response(
-                    user_id=self.current_user,
-                    emotion=self.current_emotion,
+                    user_id=self.current_user if self.current_user else "",
+                    emotion=self.current_emotion if self.current_emotion else "",
                     message=message,
                     conversation_history=self.conversation_history
                 )
-                
                 if response["success"]:
                     self.add_to_chat(response["response"], "assistant")
-                    
                     # Agregar a historial
                     self.conversation_history.append({
                         "user_message": message,
@@ -285,7 +276,6 @@ class VisionAgentChat:
                     })
                 else:
                     self.add_to_chat(f"❌ Error del modelo: {response.get('error', 'Error desconocido')}", "error")
-                    
             except Exception as e:
                 self.add_to_chat(f"❌ Error: {str(e)}", "error")
     

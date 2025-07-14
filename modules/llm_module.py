@@ -75,10 +75,8 @@ Asistente:"""
         try:
             if conversation_history is None:
                 conversation_history = []
-            
             # Crear prompt personalizado
             prompt = self._create_prompt(user_id, emotion, message, conversation_history)
-            
             # Preparar payload para Ollama
             payload = {
                 "model": self.model,
@@ -90,28 +88,37 @@ Asistente:"""
                     "max_tokens": 500
                 }
             }
-            
-            # Hacer request a Ollama
+            # Hacer request a Ollama (timeout reducido a 20s)
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                timeout=60
+                timeout=20
             )
-            
             if response.status_code == 200:
                 result = response.json()
+                respuesta = result.get("response", "").strip()
+                if not respuesta:
+                    self.logger.error("Respuesta vacía del modelo LLM.")
+                    return {
+                        "response": "[El modelo no pudo generar una respuesta en este momento. Intenta de nuevo o revisa la conexión con Ollama.]",
+                        "success": False,
+                        "model_used": self.model,
+                        "error": "Respuesta vacía del modelo LLM"
+                    }
                 return {
-                    "response": result.get("response", "").strip(),
+                    "response": respuesta,
                     "success": True,
                     "model_used": self.model
                 }
             else:
                 self.logger.error(f"Error en Ollama API: {response.status_code}")
-                return {"success": False, "error": "Ollama API error"}
-                
+                return {"success": False, "error": f"Ollama API error: {response.status_code}", "response": "[No se pudo obtener respuesta del modelo. Intenta más tarde.]"}
+        except requests.Timeout:
+            self.logger.error("Timeout al esperar respuesta del modelo LLM.")
+            return {"success": False, "error": "Timeout del modelo LLM", "response": "[El modelo tardó demasiado en responder. Intenta de nuevo más tarde.]"}
         except Exception as e:
             self.logger.error(f"Error al generar respuesta: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": str(e), "response": "[Ocurrió un error inesperado al generar la respuesta.]"}
     
     def get_available_models(self) -> List[str]:
         """

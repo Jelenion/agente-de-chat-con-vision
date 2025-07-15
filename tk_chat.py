@@ -502,11 +502,11 @@ class VisionAgentChat:
 
     def generate_model_response(self):
         """Generar respuesta automática del modelo usando streaming."""
-        def run_stream():
+        try:
             if not self.current_user or not self.current_emotion:
                 return
             context = f"El usuario está en estado emocional: {self.current_emotion}"
-            response_gen = self.llm_module.generate_response_stream(
+            response = self.llm_module.generate_response(
                 user_id=self.current_user,
                 emotion=self.current_emotion,
                 message=context,
@@ -514,7 +514,6 @@ class VisionAgentChat:
             )
             if response["success"]:
                 self.add_to_chat(response["response"], "assistant")
-                
                 # Guardar respuesta automática en la base de datos
                 if self.current_session_id:
                     self.database.save_message(
@@ -524,7 +523,6 @@ class VisionAgentChat:
                         user_name=self.current_user,
                         emotion=self.current_emotion
                     )
-                
                 # Agregar a historial
                 self.conversation_history.append({
                     "user_message": context,

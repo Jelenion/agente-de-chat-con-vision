@@ -404,13 +404,12 @@ class VisionAgentChat:
         import time
         self.chat_display.config(state='normal')
         pos = self.chat_display.index(tk.END)
-        # Si response_generator es un string, simular streaming carácter por carácter
         if isinstance(response_generator, str):
             for char in response_generator:
                 self.chat_display.insert(pos, char)
                 self.chat_display.see(tk.END)
                 self.chat_display.update_idletasks()
-                time.sleep(0.015)  # retardo para simular escritura
+                time.sleep(0.015)
             self.chat_display.insert(tk.END, "\n\n")
             self.chat_display.config(state='disabled')
             self.root.update_idletasks()

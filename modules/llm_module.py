@@ -107,7 +107,7 @@ class LLMModule:
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 80,
+                    "max_tokens": 256,
                     "num_predict": 100,
                     "top_k": 40,
                     "repeat_penalty": 1.1
@@ -193,7 +193,7 @@ class LLMModule:
             "options": {
                 "temperature": 0.7,
                 "top_p": 0.9,
-                "max_tokens": 80,
+                "max_tokens": 256,
                 "num_predict": 100,
                 "top_k": 40,
                 "repeat_penalty": 1.1

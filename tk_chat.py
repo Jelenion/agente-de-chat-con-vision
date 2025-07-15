@@ -11,6 +11,7 @@ import tempfile
 from datetime import datetime
 import threading
 import re
+import time
 
 # Agregar el directorio actual al path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -60,6 +61,8 @@ class VisionAgentChat:
         session_menu.add_command(label="Guardar Sesión Actual", command=self.save_current_session)
         session_menu.add_separator()
         session_menu.add_command(label="Gestionar Sesiones", command=self.manage_sessions)
+        session_menu.add_separator()
+        session_menu.add_command(label="Limpiar Base de Datos", command=self.limpiar_base_de_datos)
         
         # Menú Chat
         chat_menu = tk.Menu(menubar, tearoff=0)
@@ -240,46 +243,57 @@ class VisionAgentChat:
         if not session_info:
             messagebox.showerror("Error", "No se pudo cargar la sesión")
             return
-        
         # Obtener mensajes de la sesión
         messages = self.database.get_session_messages(session_id)
-        
         # Actualizar variables
         self.current_session_id = session_id
         self.current_session_name = session_info['name']
         self.session_label.configure(text=self.current_session_name)
-        
         # Limpiar chat actual
         self.chat_display.config(state='normal')
         self.chat_display.delete(1.0, tk.END)
         self.chat_display.config(state='disabled')
-        
         # Cargar mensajes
         self.conversation_history = []
         for message in messages:
             if message['type'] == 'user':
                 self.add_to_chat(f"Tú: {message['content']}", "user")
-                # Agregar al historial para el LLM
                 self.conversation_history.append({
                     "user_message": message['content'],
-                    "assistant_response": "",  # Se llenará con la respuesta siguiente
+                    "assistant_response": "",
                     "emotion": message.get('emotion'),
                     "timestamp": datetime.fromisoformat(message['timestamp'])
                 })
             elif message['type'] == 'assistant':
                 self.add_to_chat(message['content'], "assistant")
-                # Actualizar la respuesta del asistente en el historial
                 if self.conversation_history:
                     self.conversation_history[-1]["assistant_response"] = message['content']
             elif message['type'] == 'image':
-                self.add_image_to_chat(message['image_path'], message['user_name'], message['emotion'])
-                # Actualizar usuario y emoción actual
-                self.current_user = message['user_name']
-                self.current_emotion = message['emotion']
-                self.user_label.configure(text=message['user_name'])
-                self.emotion_label.configure(text=message['emotion'].title())
-        
+                # Si hay image_data, reconstruir imagen temporal
+                if message.get('image_data'):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_img:
+                        tmp_img.write(message['image_data'])
+                        tmp_img_path = tmp_img.name
+                    self.add_image_to_chat(tmp_img_path, message.get('user_name'), message.get('emotion'))
+                else:
+                    self.add_to_chat("[Imagen no disponible en la base de datos]", "system")
+                self.current_user = message.get('user_name')
+                self.current_emotion = message.get('emotion')
+                self.user_label.configure(text=message.get('user_name', ''))
+                self.emotion_label.configure(text=message.get('emotion', '').title())
         messagebox.showinfo("Éxito", f"Sesión '{self.current_session_name}' cargada correctamente")
+
+    def limpiar_base_de_datos(self):
+        """Elimina todas las sesiones y mensajes de la base de datos."""
+        import sqlite3
+        from modules.database_module import ChatDatabase
+        db = ChatDatabase()
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM chat_messages")
+            cursor.execute("DELETE FROM chat_sessions")
+            conn.commit()
+        messagebox.showinfo("Limpieza", "La base de datos ha sido limpiada correctamente.")
     
     def manage_sessions(self):
         """Gestionar sesiones (alias para load_session_dialog)"""
@@ -386,32 +400,43 @@ class VisionAgentChat:
             self._welcome_shown = True
     
     def add_streaming_response(self, response_generator):
-        """Agrega la respuesta del modelo al chat en tiempo real mostrando solo frases completas."""
+        """Agrega la respuesta del modelo al chat simulando escritura en vivo si es string."""
+        import time
         self.chat_display.config(state='normal')
         pos = self.chat_display.index(tk.END)
+        # Si response_generator es un string, simular streaming carácter por carácter
+        if isinstance(response_generator, str):
+            for char in response_generator:
+                self.chat_display.insert(pos, char)
+                self.chat_display.see(tk.END)
+                self.chat_display.update_idletasks()
+                time.sleep(0.015)  # retardo para simular escritura
+            self.chat_display.insert(tk.END, "\n\n")
+            self.chat_display.config(state='disabled')
+            self.root.update_idletasks()
+            return response_generator
+        # Si es un generador real, usar lógica original
         full_text = ""
         buffer = ""
         last_shown = ""
+        import re
         sentence_end = re.compile(r'([.!?\n])')
         for fragment in response_generator:
             full_text += fragment
             buffer += fragment
-            # Buscar frases completas en el buffer
             sentences = []
             start = 0
             for match in sentence_end.finditer(buffer):
                 end = match.end()
                 sentences.append(buffer[start:end])
                 start = end
-            # Mostrar solo frases completas
             if sentences:
                 to_show = "".join(sentences)
                 self.chat_display.insert(pos, to_show)
                 self.chat_display.see(tk.END)
                 self.chat_display.update_idletasks()
                 last_shown += to_show
-                buffer = buffer[start:]  # Dejar solo lo incompleto
-        # Al final, mostrar lo que quede en el buffer
+                buffer = buffer[start:]
         if buffer:
             self.chat_display.insert(pos, buffer)
             self.chat_display.see(tk.END)
@@ -423,7 +448,7 @@ class VisionAgentChat:
         return full_text
 
     def generate_model_response(self):
-        """Generar respuesta automática del modelo usando streaming."""
+        """Generar respuesta automática del modelo (respuesta simulando streaming)."""
         try:
             if not self.current_user or not self.current_emotion:
                 return
@@ -435,20 +460,19 @@ class VisionAgentChat:
                 conversation_history=self.conversation_history
             )
             if response["success"]:
-                self.add_to_chat(response["response"], "assistant")
-                # Guardar respuesta automática en la base de datos
+                # Simular streaming aunque la respuesta sea completa
+                full_response = self.add_streaming_response(response["response"])
                 if self.current_session_id:
                     self.database.save_message(
                         session_id=self.current_session_id,
                         message_type='assistant',
-                        content=response["response"],
+                        content=full_response,
                         user_name=self.current_user,
                         emotion=self.current_emotion
                     )
-                # Agregar a historial
                 self.conversation_history.append({
                     "user_message": context,
-                    "assistant_response": response["response"],
+                    "assistant_response": full_response,
                     "emotion": self.current_emotion,
                     "timestamp": datetime.now()
                 })
@@ -458,13 +482,11 @@ class VisionAgentChat:
             self.add_to_chat(f"❌ Error: {str(e)}", "error")
     
     def send_message(self, event=None):
-        """Enviar mensaje de texto usando streaming."""
+        """Enviar mensaje de texto (respuesta simulando streaming)."""
         message = self.text_input.get().strip()
         if message:
             timestamp = datetime.now().strftime("%H:%M")
             self.add_to_chat(f"[{timestamp}] Tú: {message}", "user")
-            
-            # Guardar mensaje del usuario en la base de datos
             if self.current_session_id:
                 self.database.save_message(
                     session_id=self.current_session_id,
@@ -473,13 +495,8 @@ class VisionAgentChat:
                     user_name=self.current_user,
                     emotion=self.current_emotion
                 )
-            
-            # Limpiar campo de texto
             self.text_input.delete(0, tk.END)
-            
-            # Generar respuesta del modelo
             try:
-                # Si no hay usuario/emoción, enviar como conversación genérica
                 response = self.llm_module.generate_response(
                     user_id=self.current_user if self.current_user else "",
                     emotion=self.current_emotion if self.current_emotion else "",
@@ -487,22 +504,19 @@ class VisionAgentChat:
                     conversation_history=self.conversation_history
                 )
                 if response["success"]:
-                    self.add_to_chat(response["response"], "assistant")
-                    
-                    # Guardar respuesta del asistente en la base de datos
+                    # Simular streaming aunque la respuesta sea completa
+                    full_response = self.add_streaming_response(response["response"])
                     if self.current_session_id:
                         self.database.save_message(
                             session_id=self.current_session_id,
                             message_type='assistant',
-                            content=response["response"],
+                            content=full_response,
                             user_name=self.current_user,
                             emotion=self.current_emotion
                         )
-                    
-                    # Agregar a historial
                     self.conversation_history.append({
                         "user_message": message,
-                        "assistant_response": response["response"],
+                        "assistant_response": full_response,
                         "emotion": self.current_emotion,
                         "timestamp": datetime.now()
                     })

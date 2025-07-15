@@ -9,6 +9,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
 from loguru import logger
 from typing import Dict
+import difflib
 
 from config import USERS, EMOTIONS
 
@@ -52,25 +53,20 @@ class VisionModule:
     
     def _preprocess_image(self, image: Image.Image) -> np.ndarray:
         """
-        Preprocesa la imagen exactamente como en el código de Colab
+        Preprocesa la imagen exactamente como en el código de Colab (resize directo a 96x96, sin recorte cuadrado).
         """
         try:
             # Convertir a RGB si es necesario
             if image.mode != 'RGB':
                 image = image.convert('RGB')
-            
-            # Redimensionar exactamente a 96x96 (como en Colab)
+            # Redimensionar exactamente a 96x96 (sin recorte)
             image = image.resize((96, 96))
-            
-            # Convertir a array y normalizar (como en Colab)
+            # Convertir a array y normalizar
             image_array = img_to_array(image)
-            image_array = image_array / 255.0  # Normalización como en Colab
-            
+            image_array = image_array / 255.0
             # Agregar dimensión de batch
             image_array = np.expand_dims(image_array, axis=0)
-            
             return image_array
-            
         except Exception as e:
             self.logger.error(f"Error al preprocesar imagen: {e}")
             raise
@@ -164,31 +160,38 @@ class VisionModule:
         try:
             # Hacer una sola predicción (más eficiente)
             result = self.detect_emotion(image_path)
-            
             if result["success"]:
                 predicted_class = result["emotion"]
                 confidence = result["confidence"]
-                
                 # Extraer emoción real (puede venir como 'abrahan_feliz', 'jesus_triste', etc.)
                 emotion_found = None
-                for emo in EMOTIONS:
-                    if emo in predicted_class.lower():
-                        emotion_found = emo
-                        break
+                pred_lower = predicted_class.lower()
+                # 1. Coincidencia exacta
+                if pred_lower in EMOTIONS:
+                    emotion_found = pred_lower
+                # 2. Coincidencia por prefijo/sufijo
+                if not emotion_found:
+                    for emo in EMOTIONS:
+                        if pred_lower.endswith(emo) or pred_lower.startswith(emo):
+                            emotion_found = emo
+                            break
+                # 3. Coincidencia aproximada (más parecida)
+                if not emotion_found:
+                    close = difflib.get_close_matches(pred_lower, EMOTIONS, n=1, cutoff=0.6)
+                    if close:
+                        emotion_found = close[0]
                 if not emotion_found:
                     emotion_found = "emoción desconocida"
-                
                 # Determinar usuario basado en la clase predicha
-                if "abrahan" in predicted_class.lower():
+                if "abrahan" in pred_lower:
                     user_id = "abrahan"
                     user_name = "Abrahan"
-                elif "jesus" in predicted_class.lower():
+                elif "jesus" in pred_lower:
                     user_id = "jesus"
                     user_name = "Jesus"
                 else:
                     user_id = "abrahan"
                     user_name = "Desconocido"
-                
                 return {
                     "user_id": user_id,
                     "user_name": user_name,
@@ -199,7 +202,6 @@ class VisionModule:
                 }
             else:
                 return result
-            
         except Exception as e:
             self.logger.error(f"Error al procesar imagen: {e}")
             return {"success": False, "error": str(e)}

@@ -9,6 +9,8 @@ import sys
 import os
 import tempfile
 from datetime import datetime
+import threading
+import re
 
 # Agregar el directorio actual al path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -461,15 +463,50 @@ class VisionAgentChat:
         welcome_message = "¡Hola! Soy tu agente conversacional. Puedes escribirme o subir una imagen para personalizar la conversación."
         self.add_to_chat(welcome_message, "assistant")
     
+    def add_streaming_response(self, response_generator):
+        """Agrega la respuesta del modelo al chat en tiempo real mostrando solo frases completas."""
+        self.chat_display.config(state='normal')
+        pos = self.chat_display.index(tk.END)
+        full_text = ""
+        buffer = ""
+        last_shown = ""
+        sentence_end = re.compile(r'([.!?\n])')
+        for fragment in response_generator:
+            full_text += fragment
+            buffer += fragment
+            # Buscar frases completas en el buffer
+            sentences = []
+            start = 0
+            for match in sentence_end.finditer(buffer):
+                end = match.end()
+                sentences.append(buffer[start:end])
+                start = end
+            # Mostrar solo frases completas
+            if sentences:
+                to_show = "".join(sentences)
+                self.chat_display.insert(pos, to_show)
+                self.chat_display.see(tk.END)
+                self.chat_display.update_idletasks()
+                last_shown += to_show
+                buffer = buffer[start:]  # Dejar solo lo incompleto
+        # Al final, mostrar lo que quede en el buffer
+        if buffer:
+            self.chat_display.insert(pos, buffer)
+            self.chat_display.see(tk.END)
+            self.chat_display.update_idletasks()
+            last_shown += buffer
+        self.chat_display.insert(tk.END, "\n\n")
+        self.chat_display.config(state='disabled')
+        self.root.update_idletasks()
+        return full_text
+
     def generate_model_response(self):
-        """Generar respuesta automática del modelo"""
-        try:
-            # Solo generar respuesta si hay usuario y emoción detectados
+        """Generar respuesta automática del modelo usando streaming."""
+        def run_stream():
             if not self.current_user or not self.current_emotion:
                 return
-            # Crear contexto para el modelo
             context = f"El usuario está en estado emocional: {self.current_emotion}"
-            response = self.llm_module.generate_response(
+            response_gen = self.llm_module.generate_response_stream(
                 user_id=self.current_user,
                 emotion=self.current_emotion,
                 message=context,
@@ -501,10 +538,9 @@ class VisionAgentChat:
             self.add_to_chat(f"❌ Error: {str(e)}", "error")
     
     def send_message(self, event=None):
-        """Enviar mensaje de texto"""
+        """Enviar mensaje de texto usando streaming."""
         message = self.text_input.get().strip()
         if message:
-            # Agregar mensaje del usuario
             timestamp = datetime.now().strftime("%H:%M")
             self.add_to_chat(f"[{timestamp}] Tú: {message}", "user")
             

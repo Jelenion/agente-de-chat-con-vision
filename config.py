@@ -17,14 +17,14 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:latest")
 
 # Configuración de usuarios
 USERS = {
-    "user_a": {
+    "abrahan": {
         "name": "Abrahan",
-        "prompt_template": "Eres un asistente amigable y profesional. El usuario es {user_name}. Responde de manera cordial y útil.",
+        "prompt_template": "Eres un asistente amigable. Usuario: {user_name}. Responde cordialmente.",
         "personality": "profesional"
     },
-    "user_b": {
+    "jesus": {
         "name": "Jesus", 
-        "prompt_template": "Eres un asistente creativo y dinámico. El usuario es {user_name}. Responde de manera creativa y entusiasta.",
+        "prompt_template": "Eres un asistente creativo. Usuario: {user_name}. Responde creativamente.",
         "personality": "creativo"
     }
 }

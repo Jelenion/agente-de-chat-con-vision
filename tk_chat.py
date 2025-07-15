@@ -68,90 +68,63 @@ class VisionAgentChat:
         chat_menu.add_command(label="Exportar Chat", command=self.export_chat)
     
     def create_widgets(self):
-        """Crear todos los widgets de la interfaz"""
+        """Crear todos los widgets de la interfaz (con tags de burbuja)."""
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Configurar grid
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(1, weight=1)
-        
-        # Panel izquierdo (imagen y controles)
+
+        # Panel izquierdo (solo info de sesión)
         left_panel = ttk.Frame(main_frame)
-        left_panel.grid(row=0, column=0, rowspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))
-        
-        # Información de sesión actual
+        left_panel.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))
         session_frame = ttk.LabelFrame(left_panel, text="Sesión Actual", padding="5")
         session_frame.grid(row=0, column=0, pady=(0, 10), sticky=(tk.W, tk.E))
-        
-        self.session_label = ttk.Label(session_frame, text="Nueva sesión", 
-                                     font=("Arial", 10, "bold"))
+        self.session_label = ttk.Label(session_frame, text="Nueva sesión", font=("Arial", 10, "bold"))
         self.session_label.grid(row=0, column=0)
-        
-        # Área de imagen
-        self.image_label = tk.Label(left_panel, text="Sin imagen", 
-                                   width=35, height=20, 
-                                   relief="solid", borderwidth=2,
-                                   bg="white", anchor="center")
-        self.image_label.grid(row=1, column=0, pady=(0, 10), padx=5)
-        
-        # Botón para seleccionar imagen
-        self.select_btn = ttk.Button(left_panel, text="Seleccionar Imagen", 
-                                   command=self.select_image)
-        self.select_btn.grid(row=2, column=0, pady=(0, 10))
-        
-        # Información de emoción
-        emotion_frame = ttk.LabelFrame(left_panel, text="Emoción Detectada", padding="5")
-        emotion_frame.grid(row=3, column=0, pady=(0, 10))
-        
-        self.emotion_label = ttk.Label(emotion_frame, text="Neutral", 
-                                     font=("Arial", 12, "bold"))
-        self.emotion_label.grid(row=0, column=0)
-        
-        # Información del usuario detectado
-        user_frame = ttk.LabelFrame(left_panel, text="Usuario Detectado", padding="5")
-        user_frame.grid(row=4, column=0, pady=(0, 10))
-        
-        self.user_label = ttk.Label(user_frame, text="Sin usuario", 
-                                   font=("Arial", 10, "bold"))
-        self.user_label.grid(row=0, column=0)
-        
+
         # Panel derecho (chat)
         right_panel = ttk.Frame(main_frame)
         right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         right_panel.columnconfigure(0, weight=1)
         right_panel.rowconfigure(0, weight=1)
-        
+
         # Área de chat
         chat_frame = ttk.LabelFrame(right_panel, text="Conversación", padding="5")
         chat_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         chat_frame.columnconfigure(0, weight=1)
         chat_frame.rowconfigure(0, weight=1)
-        
-        # Chat display
-        self.chat_display = scrolledtext.ScrolledText(chat_frame, 
-                                                    wrap=tk.WORD, 
-                                                    height=20,
-                                                    font=("Arial", 10))
+        self.chat_display = scrolledtext.ScrolledText(chat_frame, wrap=tk.WORD, height=20, font=("Arial", 10))
         self.chat_display.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        
-        # Frame para entrada de texto
+        # Definir tags de burbuja
+        self.chat_display.tag_configure("user_bubble", background="#ffe0b2", foreground="#333", justify="right", lmargin1=60, lmargin2=60, rmargin=10, spacing3=5, font=("Arial", 10, "bold"))
+        self.chat_display.tag_configure("assistant_bubble", background="#e1bee7", foreground="#222", justify="left", lmargin1=10, lmargin2=10, rmargin=60, spacing3=5, font=("Arial", 10))
+        self.chat_display.tag_configure("system_bubble", background="#b3e5fc", foreground="#222", justify="center", lmargin1=40, lmargin2=40, rmargin=40, spacing3=5, font=("Arial", 10, "italic"))
+        self.chat_display.tag_configure("default_bubble", background="#f0f0f0", foreground="#222", justify="left", lmargin1=10, lmargin2=10, rmargin=10, spacing3=5, font=("Arial", 10))
+
+        # Frame para entrada de texto y botón seleccionar imagen
         input_frame = ttk.Frame(chat_frame)
         input_frame.grid(row=1, column=0, sticky=(tk.W, tk.E))
         input_frame.columnconfigure(0, weight=1)
-        
-        # Campo de texto
         self.text_input = ttk.Entry(input_frame, font=("Arial", 10))
         self.text_input.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))
         self.text_input.bind('<Return>', self.send_message)
-        
-        # Botón enviar
         self.send_btn = ttk.Button(input_frame, text="Enviar", command=self.send_message)
-        self.send_btn.grid(row=0, column=1)
-    
+        self.send_btn.grid(row=0, column=1, padx=(0, 5))
+        self.select_btn = ttk.Button(input_frame, text="Seleccionar Imagen", command=self.select_image)
+        self.select_btn.grid(row=0, column=2)
+
+        # Frame para emoción y usuario detectados debajo del chat
+        status_frame = ttk.Frame(right_panel)
+        status_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
+        status_frame.columnconfigure(0, weight=1)
+        self.emotion_label = ttk.Label(status_frame, text="Emoción: Neutral", font=("Arial", 12, "bold"))
+        self.emotion_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 2))
+        self.user_label = ttk.Label(status_frame, text="Usuario: Sin usuario", font=("Arial", 10, "bold"))
+        self.user_label.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
     def create_new_session(self):
         """Crear una nueva sesión de chat"""
         session_name = f"Sesión {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -299,7 +272,7 @@ class VisionAgentChat:
                 if self.conversation_history:
                     self.conversation_history[-1]["assistant_response"] = message['content']
             elif message['type'] == 'image':
-                self.add_to_chat(f"📷 Imagen de {message['user_name']} - Emoción: {message['emotion']}", "system")
+                self.add_image_to_chat(message['image_path'], message['user_name'], message['emotion'])
                 # Actualizar usuario y emoción actual
                 self.current_user = message['user_name']
                 self.current_emotion = message['emotion']
@@ -358,7 +331,6 @@ class VisionAgentChat:
         
         if file_path:
             self.current_image_path = file_path
-            self.display_image(file_path)
             self.detect_emotion(file_path)
             
             # Guardar imagen en la base de datos si hay sesión activa
@@ -370,70 +342,22 @@ class VisionAgentChat:
                     emotion=self.current_emotion
                 )
     
-    def display_image(self, image_path):
-        """Mostrar imagen en el label"""
-        try:
-            # Cargar imagen
-            image = Image.open(image_path)
-            
-            # Convertir a RGB si es necesario
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            # Calcular dimensiones para mantener proporción
-            max_width = 250
-            max_height = 250
-            
-            # Obtener dimensiones originales
-            width, height = image.size
-            
-            # Calcular factor de escala
-            scale = min(max_width/width, max_height/height)
-            
-            # Calcular nuevas dimensiones
-            new_width = int(width * scale)
-            new_height = int(height * scale)
-            
-            # Redimensionar imagen
-            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Convertir a PhotoImage
-            photo = ImageTk.PhotoImage(image)
-            
-            # Actualizar label
-            self.image_label.configure(image=photo, text="")
-            self.image_label.image = photo  # Mantener referencia
-            
-        except Exception as e:
-            self.image_label.configure(image="", text=f"Error: {str(e)}")
-            print(f"Error al mostrar imagen: {e}")
-    
     def detect_emotion(self, image_path):
         """Detectar emoción y usuario en la imagen"""
         try:
             # Procesar imagen completa (usuario + emoción)
             result = self.vision_module.process_image(image_path)
-            
             if result["success"]:
-                # Extraer información del usuario y emoción
                 detected_user = result["user_name"]
                 detected_emotion = result["emotion"]
                 user_confidence = result["user_confidence"]
                 emotion_confidence = result["emotion_confidence"]
-                
-                # Actualizar variables
                 self.current_user = result["user_id"]
                 self.current_emotion = detected_emotion
-                
-                # Actualizar interfaz
                 self.user_label.configure(text=f"{detected_user}")
                 self.emotion_label.configure(text=f"{detected_emotion.title()}")
-                
-                # Agregar al chat
-                timestamp = datetime.now().strftime("%H:%M")
-                self.add_to_chat(f"[{timestamp}] 👤 Usuario detectado: {detected_user}", "system")
-                self.add_to_chat(f"[{timestamp}] 📷 Emoción detectada: {detected_emotion.title()}", "system")
-                
+                # Mostrar imagen en el chat estilo ChatGPT
+                self.add_image_to_chat(image_path, detected_user, detected_emotion)
                 # Guardar imagen en la base de datos si hay sesión activa
                 if self.current_session_id:
                     self.database.save_image_to_db(
@@ -442,26 +366,24 @@ class VisionAgentChat:
                         user_name=detected_user,
                         emotion=detected_emotion
                     )
-                
                 # Generar respuesta automática del modelo
                 self.generate_model_response()
             else:
                 error_msg = result.get('error', 'Error desconocido')
                 self.add_to_chat(f"❌ Error al procesar imagen: {error_msg}", "error")
-                
-                # Si el modelo no existe, sugerir entrenarlo
                 if "Modelo no encontrado" in error_msg:
                     self.add_to_chat("💡 Sugerencia: Ejecuta 'python train_cnn_model.py' para entrenar el modelo", "system")
-                
         except Exception as e:
             self.add_to_chat(f"❌ Error inesperado: {str(e)}", "error")
             import traceback
             print(f"Error completo: {traceback.format_exc()}")
     
     def start_conversation(self):
-        """Iniciar la conversación con saludo genérico"""
-        welcome_message = "¡Hola! Soy tu agente conversacional. Puedes escribirme o subir una imagen para personalizar la conversación."
-        self.add_to_chat(welcome_message, "assistant")
+        """Iniciar la conversación con saludo genérico (solo una vez)."""
+        if not getattr(self, '_welcome_shown', False):
+            welcome_message = "¡Hola! Soy tu agente conversacional. Puedes escribirme o subir una imagen para personalizar la conversación."
+            self.add_to_chat(welcome_message, "assistant")
+            self._welcome_shown = True
     
     def add_streaming_response(self, response_generator):
         """Agrega la respuesta del modelo al chat en tiempo real mostrando solo frases completas."""
@@ -590,46 +512,84 @@ class VisionAgentChat:
                 self.add_to_chat(f"❌ Error: {str(e)}", "error")
     
     def add_to_chat(self, message, sender):
-        """Agregar mensaje al chat"""
+        """Agregar mensaje al chat con estilo burbuja y alineación."""
         try:
-            # Habilitar el widget para edición
             self.chat_display.config(state='normal')
-            
-            # Insertar mensaje
-            self.chat_display.insert(tk.END, f"{message}\n\n")
-            
-            # Desplazar al final
+            # Definir estilos
+            if sender == "user":
+                tag = "user_bubble"
+                icon = "\U0001F464 "  # emoji usuario
+                align = "right"
+            elif sender == "assistant":
+                tag = "assistant_bubble"
+                icon = "\U0001F916 "  # emoji robot
+                align = "left"
+            elif sender == "system":
+                tag = "system_bubble"
+                icon = "\U0001F4AC "  # emoji mensaje
+                align = "center"
+            else:
+                tag = "default_bubble"
+                icon = ""
+                align = "left"
+            # Insertar mensaje con icono y salto de línea
+            if align == "right":
+                self.chat_display.insert(tk.END, f"{icon}{message}\n", tag)
+            elif align == "left":
+                self.chat_display.insert(tk.END, f"{icon}{message}\n", tag)
+            else:
+                self.chat_display.insert(tk.END, f"{icon}{message}\n", tag)
+            self.chat_display.insert(tk.END, "\n")
             self.chat_display.see(tk.END)
-            
-            # Deshabilitar edición
             self.chat_display.config(state='disabled')
-            
-            # Forzar actualización de la interfaz
             self.root.update_idletasks()
-            
         except Exception as e:
             print(f"Error al agregar mensaje al chat: {e}")
-    
 
+    def add_image_to_chat(self, image_path, user=None, emotion=None):
+        """Agregar una imagen como mensaje en el chat, estilo ChatGPT."""
+        try:
+            self.chat_display.config(state='normal')
+            # Cargar y redimensionar imagen
+            image = Image.open(image_path)
+            max_width = 180
+            max_height = 180
+            width, height = image.size
+            scale = min(max_width/width, max_height/height, 1.0)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(image)
+            # Insertar imagen en el chat
+            self.chat_display.image_create(tk.END, image=photo)
+            # Guardar referencia para evitar garbage collection
+            if not hasattr(self, '_chat_images_refs'):
+                self._chat_images_refs = []
+            self._chat_images_refs.append(photo)
+            # Insertar info debajo
+            info = ""
+            if user or emotion:
+                info = "\n"
+                if user:
+                    info += f"👤 {user}"
+                if emotion:
+                    info += f"  |  😃 {emotion.title()}"
+            self.chat_display.insert(tk.END, f"{info}\n\n")
+            self.chat_display.see(tk.END)
+            self.chat_display.config(state='disabled')
+            self.root.update_idletasks()
+        except Exception as e:
+            print(f"Error al mostrar imagen en el chat: {e}")
     
     def clear_chat(self):
         """Limpiar chat"""
         try:
-            # Habilitar edición
             self.chat_display.config(state='normal')
-            
-            # Limpiar contenido
             self.chat_display.delete(1.0, tk.END)
-            
-            # Limpiar historial
             self.conversation_history = []
-            
-            # Deshabilitar edición
             self.chat_display.config(state='disabled')
-            
-            # Reiniciar conversación
+            self._welcome_shown = False
             self.start_conversation()
-            
         except Exception as e:
             print(f"Error al limpiar chat: {e}")
 

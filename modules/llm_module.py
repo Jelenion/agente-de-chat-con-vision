@@ -5,6 +5,7 @@ import requests
 import json
 from typing import Dict, List, Optional
 from loguru import logger
+import random
 
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL, USERS
 
@@ -21,89 +22,80 @@ class LLMModule:
         
     def _create_prompt(self, user_id: str, emotion: str, message: str, conversation_history: List[Dict]) -> str:
         """
-        Crea el prompt personalizado optimizado para velocidad
+        Crea un prompt tipo chat continuo para el modelo LLM local (Ollama).
         """
         user_config = USERS[user_id]
-        
-        # Prompt base del usuario (más conciso)
-        base_prompt = user_config["prompt_template"].format(user_name=user_config["name"])
-        
-        # Contexto emocional (más corto)
-        emotion_context = self._get_emotion_context(emotion)
-        
-        # Historial de conversación (limitado a 3 interacciones)
+        user_name = user_config["name"]
+
+        # Instrucción e información solo al inicio
+        base_instruction = (
+            f"Eres un asistente conversacional empático y profesional.\n"
+            f"Usuario: {user_name}\n"
+            f"Emoción actual: {emotion}\n\n"
+            f"Chat:\n"
+        )
+
+        # Historial de conversación en formato chat real (solo 3 turnos)
         history_context = ""
-        if conversation_history:
-            history_context = "\nContexto reciente:\n"
-            for entry in conversation_history[-3:]:  # Solo últimas 3 interacciones
-                history_context += f"U: {entry['user_message'][:100]}...\n"  # Limitar longitud
-                history_context += f"A: {entry['assistant_response'][:100]}...\n"
-        
-        # Prompt final optimizado
-        final_prompt = f"""{base_prompt}
-{emotion_context}
-{history_context}
-Usuario ({emotion}): {message}
-Asistente:"""
-        
-        return final_prompt
-    
-    def _get_emotion_context(self, emotion: str) -> str:
+        for entry in conversation_history[-3:]:  # Últimos 3 turnos
+            history_context += f"{user_name}: {entry['user_message']}\n"
+            history_context += f"Asistente: {entry['assistant_response']}\n"
+
+        # Añadir el último mensaje del usuario (el actual)
+        history_context += f"{user_name}: {message}\nAsistente:"
+
+        return f"{base_instruction}{history_context}"
+
+    def _get_emotion_instruction(self, emotion: str) -> str:
         """
-        Proporciona contexto emocional optimizado para velocidad
+        Devuelve una instrucción clara para el modelo según la emoción.
         """
-        emotion_contexts = {
-            "feliz": "Usuario feliz. Responde con alegría.",
-            "triste": "Usuario triste. Sé empático.",
-            "enojado": "Usuario enojado. Mantén calma.",
-            "sorprendido": "Usuario sorprendido. Sé claro.",
-            "pensativo": "Usuario pensativo. Sé reflexivo.",
-            "cansado": "Usuario cansado. Sé comprensivo.",
-            "riendo": "Usuario riendo. Responde con humor.",
-            "sorprendido": "Usuario sorprendido. Sé claro."
+        instructions = {
+            "feliz": "Responde con alegría y entusiasmo.",
+            "triste": "Responde de manera empática y comprensiva.",
+            "enojado": "Responde con calma y comprensión, evitando confrontaciones.",
+            "sorprendido": "Responde con claridad y explicaciones.",
+            "pensativo": "Responde de manera reflexiva y abierta.",
+            "cansado": "Responde con comprensión y sugerencias para descansar.",
+            "riendo": "Responde con humor y simpatía.",
         }
-        
-        return emotion_contexts.get(emotion, "Responde apropiadamente.")
-    
+        return instructions.get(emotion, "Responde de manera apropiada a la emoción del usuario.")
+
     def generate_response(self, user_id: str, emotion: str, message: str, conversation_history: List[Dict] = None) -> Dict:
         """
-        Genera una respuesta usando el modelo de Ollama con optimizaciones para velocidad
+        Genera una respuesta usando el modelo de Ollama con prompt tipo chat continuo y emocional
         """
         try:
             if conversation_history is None:
                 conversation_history = []
             
-            # Crear prompt personalizado (más conciso)
             prompt = self._create_prompt(user_id, emotion, message, conversation_history)
             
-            # Preparar payload optimizado para velocidad
             payload = {
                 "model": self.model,
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.5,  # Reducido para respuestas más rápidas
-                    "top_p": 0.8,        # Reducido para mayor velocidad
-                    "max_tokens": 200,    # Reducido para respuestas más cortas
-                    "num_predict": 150,   # Limitar tokens de predicción
-                    "top_k": 40,         # Reducir opciones de tokens
-                    "repeat_penalty": 1.1 # Evitar repeticiones
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                    "max_tokens": 180,
+                    "num_predict": 100,
+                    "top_k": 40,
+                    "repeat_penalty": 1.1
                 }
             }
             
-            # Hacer request a Ollama con timeout optimizado
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                timeout=15  # Reducido a 15 segundos
+                timeout=30
             )
             
             if response.status_code == 200:
                 result = response.json()
                 respuesta = result.get("response", "").strip()
                 
-                if not respuesta:
-                    # Respuesta de fallback rápida
+                if not respuesta or not respuesta.strip():
                     fallback_response = self._get_fallback_response(emotion, user_id)
                     return {
                         "response": fallback_response,
@@ -147,22 +139,46 @@ Asistente:"""
             }
     
     def _get_fallback_response(self, emotion: str, user_id: str) -> str:
-        """
-        Genera respuestas de fallback rápidas cuando el modelo no responde
-        """
         user_name = USERS.get(user_id, {}).get("name", "Usuario")
-        
         fallback_responses = {
-            "feliz": f"¡Hola {user_name}! Veo que estás feliz. ¿En qué puedo ayudarte hoy?",
-            "triste": f"Hola {user_name}, veo que estás triste. ¿Te gustaría hablar sobre algo?",
-            "enojado": f"Hola {user_name}, entiendo que estés molesto. ¿Qué puedo hacer para ayudarte?",
-            "sorprendido": f"¡Hola {user_name}! Pareces sorprendido. ¿Qué te ha llamado la atención?",
-            "pensativo": f"Hola {user_name}, veo que estás pensativo. ¿En qué estás reflexionando?",
-            "cansado": f"Hola {user_name}, parece que estás cansado. ¿Necesitas descansar o hay algo en lo que pueda ayudarte?",
-            "riendo": f"¡Hola {user_name}! Me alegra verte riendo. ¿Qué te hace tan feliz?"
+            "pensativo": [
+                f"¿Quieres contarme en qué piensas, {user_name}?",
+                f"Si necesitas hablar de tus pensamientos, aquí estoy.",
+                f"¿Te gustaría compartir lo que te preocupa, {user_name}?"
+            ],
+            "feliz": [
+                f"¡Me alegra verte feliz, {user_name}! ¿Qué te hace sentir así?",
+                f"¡Qué bueno verte de buen ánimo, {user_name}!",
+                f"¡Genial, {user_name}! ¿Quieres compartir tu alegría?"
+            ],
+            "triste": [
+                f"Si quieres hablar de lo que te pone triste, aquí estoy, {user_name}.",
+                f"¿Te gustaría compartir lo que te preocupa, {user_name}?",
+                f"Recuerda que no estás solo, {user_name}."
+            ],
+            "enojado": [
+                f"Entiendo que estés molesto, {user_name}. ¿Quieres desahogarte?",
+                f"Si necesitas hablar de lo que te enoja, aquí estoy, {user_name}.",
+                f"A veces expresar lo que sentimos ayuda, {user_name}."
+            ],
+            "cansado": [
+                f"Si necesitas descansar, tómate tu tiempo, {user_name}.",
+                f"¿Quieres hablar de lo que te cansa, {user_name}?",
+                f"Recuerda cuidar de ti mismo, {user_name}."
+            ],
+            "riendo": [
+                f"¡Me alegra verte riendo, {user_name}! ¿Qué te hace tan feliz?",
+                f"¡Qué bueno verte de buen humor, {user_name}!",
+                f"¡Sigue disfrutando, {user_name}!"
+            ],
+            "sorprendido": [
+                f"¿Qué te ha sorprendido, {user_name}?",
+                f"¡Vaya sorpresa, {user_name}! ¿Quieres contarme más?",
+                f"Cuéntame qué te sorprendió, {user_name}."
+            ]
         }
-        
-        return fallback_responses.get(emotion, f"¡Hola {user_name}! ¿En qué puedo ayudarte?")
+        opciones = fallback_responses.get(emotion, [f"¿En qué puedo ayudarte, {user_name}?"])
+        return random.choice(opciones)
     
     def get_available_models(self) -> List[str]:
         """

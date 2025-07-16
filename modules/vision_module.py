@@ -142,42 +142,32 @@ class VisionModule:
             if result["success"]:
                 predicted_class = result["emotion"]  # Clase predicha
                 confidence = result["confidence"]  # Confianza
-                # Extraer emoción real (puede venir como 'abrahan_feliz', 'jesus_triste', etc.)
-                emotion_found = None  # Inicializa emoción
-                pred_lower = predicted_class.lower()  # Minúsculas
-                # 1. Coincidencia exacta
-                if pred_lower in EMOTIONS:
+                # Extraer usuario y emoción real del formato 'usuario_emocion'
+                user_id, emotion_found = None, None
+                pred_lower = predicted_class.lower()
+                if '_' in pred_lower:
+                    user_id, emotion_found = pred_lower.split('_', 1)
+                else:
+                    # fallback: solo emoción, usuario por defecto
+                    user_id = "abrahan"
                     emotion_found = pred_lower
-                # 2. Coincidencia por prefijo/sufijo
-                if not emotion_found:
-                    for emo in EMOTIONS:
-                        if pred_lower.endswith(emo) or pred_lower.startswith(emo):
-                            emotion_found = emo
-                            break
-                # 3. Coincidencia aproximada (más parecida)
-                if not emotion_found:
-                    close = difflib.get_close_matches(pred_lower, EMOTIONS, n=1, cutoff=0.6)
+                # Nombre legible
+                user_name = user_id.capitalize() if user_id else "Desconocido"
+                # Validar emoción
+                if emotion_found not in EMOTIONS:
+                    import difflib
+                    close = difflib.get_close_matches(emotion_found, EMOTIONS, n=1, cutoff=0.6)
                     if close:
                         emotion_found = close[0]
-                if not emotion_found:
-                    emotion_found = "emoción desconocida"  # Fallback
-                # Determinar usuario basado en la clase predicha
-                if "abrahan" in pred_lower:
-                    user_id = "abrahan"
-                    user_name = "Abrahan"
-                elif "jesus" in pred_lower:
-                    user_id = "jesus"
-                    user_name = "Jesus"
-                else:
-                    user_id = "abrahan"
-                    user_name = "Desconocido"
+                    else:
+                        emotion_found = "emoción desconocida"
                 return {
-                    "user_id": user_id,  # ID usuario
-                    "user_name": user_name,  # Nombre usuario
-                    "user_confidence": confidence,  # Confianza usuario
-                    "emotion": emotion_found,  # Emoción
-                    "emotion_confidence": confidence,  # Confianza emoción
-                    "success": True  # Éxito
+                    "user_id": user_id,
+                    "user_name": user_name,
+                    "user_confidence": confidence,
+                    "emotion": emotion_found,
+                    "emotion_confidence": confidence,
+                    "success": True
                 }
             else:
                 return result  # Devuelve error

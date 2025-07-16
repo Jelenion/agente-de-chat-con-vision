@@ -124,42 +124,7 @@ class VisionModule:
             self.logger.error(f"Error al detectar emoción: {e}")  # Log de error
             return {"success": False, "error": str(e)}  # Devuelve error
     
-    def identify_user(self, image_path: str) -> Dict:
-        """
-        Identifica al usuario basado en la predicción del modelo
-        """
-        try:
-            # Usar la misma lógica que detect_emotion
-            result = self.detect_emotion(image_path)  # Predicción
-            
-            if result["success"]:
-                predicted_class = result["emotion"]  # Clase predicha
-                confidence = result["confidence"]  # Confianza
-                
-                # Determinar usuario basado en la clase predicha
-                if "abrahan" in predicted_class.lower():
-                    user_id = "abrahan"
-                    user_name = "Abrahan"
-                elif "jesus" in predicted_class.lower():
-                    user_id = "jesus"
-                    user_name = "Jesus"
-                else:
-                    user_id = "abrahan"
-                    user_name = "Desconocido"
-                
-                return {
-                    "user_id": user_id,  # ID usuario
-                    "user_name": user_name,  # Nombre usuario
-                    "confidence": confidence,  # Confianza
-                    "success": True  # Éxito
-                }
-            else:
-                return result  # Devuelve error
-                
-        except Exception as e:
-            self.logger.error(f"Error al identificar usuario: {e}")  # Log de error
-            return {"success": False, "error": str(e)}  # Devuelve error
-    
+
     def process_image(self, image_path: str) -> Dict:
         """
         Procesa una imagen: identifica usuario y emoción

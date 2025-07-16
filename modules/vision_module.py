@@ -219,7 +219,8 @@ class VisionModule:
             for file in files:
                 if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif')):
                     img_path = os.path.join(root, file)
-                    label = os.path.basename(root).split('_')[-1].lower()
+                    # La clase será el nombre de la carpeta (usuario_emocion)
+                    label = os.path.basename(root).lower()  # Ejemplo: 'abrahan_feliz'
                     class_names.add(label)
                     try:
                         img = Image.open(img_path).convert('RGB')

@@ -1,9 +1,16 @@
 [
-  "cansado",
-  "enojado",
-  "feliz",
-  "pensativo",
-  "riendo",
-  "sorprendido",
-  "triste"
+  "abrahan_cansado",
+  "abrahan_enojado",
+  "abrahan_feliz",
+  "abrahan_pensativo",
+  "abrahan_riendo",
+  "abrahan_sorprendido",
+  "abrahan_triste",
+  "jesus_cansado",
+  "jesus_enojado",
+  "jesus_feliz",
+  "jesus_pensativo",
+  "jesus_riendo",
+  "jesus_sorprendido",
+  "jesus_triste"
 ]

@@ -149,7 +149,7 @@ class VisionModule:
                     user_id, emotion_found = pred_lower.split('_', 1)
                 else:
                     # fallback: solo emoción, usuario por defecto
-                    user_id = "abrahan"
+                    user_id = "user"
                     emotion_found = pred_lower
                 # Nombre legible
                 user_name = user_id.capitalize() if user_id else "Desconocido"

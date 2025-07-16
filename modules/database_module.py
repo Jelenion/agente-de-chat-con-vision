@@ -1,20 +1,21 @@
-import sqlite3
-import os
-import base64
-from datetime import datetime
-from typing import List, Dict, Optional, Tuple
-import json
+# Módulo para manejar la base de datos de chat usando SQLite
+import sqlite3  # Importa el módulo de SQLite para bases de datos locales
+import os  # Para operaciones con el sistema de archivos
+import base64  # Para codificar/decodificar datos binarios
+from datetime import datetime  # Para manejar fechas y horas
+from typing import List, Dict, Optional, Tuple  # Tipos para anotaciones
+import json  # Para manejar datos en formato JSON
 
 class ChatDatabase:
     def __init__(self, db_path: str = "chat_history.db"):
         """Inicializa la base de datos de chat"""
-        self.db_path = db_path
-        self.init_database()
+        self.db_path = db_path  # Ruta al archivo de la base de datos
+        self.init_database()  # Crea las tablas si no existen
     
     def init_database(self):
         """Crea las tablas necesarias si no existen"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
+        with sqlite3.connect(self.db_path) as conn:  # Abre conexión a la base de datos
+            cursor = conn.cursor()  # Crea un cursor para ejecutar comandos SQL
             
             # Tabla para las sesiones de chat
             cursor.execute('''
@@ -41,7 +42,7 @@ class ChatDatabase:
                 )
             ''')
             
-            conn.commit()
+            conn.commit()  # Guarda los cambios
     
     def create_new_session(self, session_name: str) -> int:
         """Crea una nueva sesión de chat y retorna su ID"""
@@ -52,7 +53,7 @@ class ChatDatabase:
                 (session_name,)
             )
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid  # Retorna el ID de la nueva sesión
     
     def save_message(self, session_id: int, message_type: str, content: str, 
                     user_name: Optional[str] = None, emotion: Optional[str] = None,
@@ -73,7 +74,7 @@ class ChatDatabase:
             )
             
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid  # Retorna el ID del mensaje guardado
     
     def get_all_sessions(self) -> List[Dict]:
         """Obtiene todas las sesiones de chat ordenadas por fecha de actualización"""
@@ -86,7 +87,7 @@ class ChatDatabase:
                 ORDER BY last_updated DESC
             ''')
             
-            sessions = []
+            sessions = []  # Lista para almacenar las sesiones
             for row in cursor.fetchall():
                 sessions.append({
                     'id': row[0],
@@ -96,7 +97,7 @@ class ChatDatabase:
                     'message_count': row[4]
                 })
             
-            return sessions
+            return sessions  # Retorna la lista de sesiones
     
     def get_session_messages(self, session_id: int) -> List[Dict]:
         """Obtiene todos los mensajes de una sesión específica"""
@@ -109,7 +110,7 @@ class ChatDatabase:
                 ORDER BY timestamp ASC
             ''', (session_id,))
             
-            messages = []
+            messages = []  # Lista para almacenar los mensajes
             for row in cursor.fetchall():
                 message = {
                     'id': row[0],
@@ -122,7 +123,7 @@ class ChatDatabase:
                 }
                 messages.append(message)
             
-            return messages
+            return messages  # Retorna la lista de mensajes
     
     def delete_session(self, session_id: int) -> bool:
         """Elimina una sesión de chat y todos sus mensajes"""
@@ -134,10 +135,10 @@ class ChatDatabase:
                 # Eliminar la sesión
                 cursor.execute("DELETE FROM chat_sessions WHERE id = ?", (session_id,))
                 conn.commit()
-                return True
+                return True  # Éxito
         except Exception as e:
             print(f"Error eliminando sesión: {e}")
-            return False
+            return False  # Fallo
     
     def get_session_info(self, session_id: int) -> Optional[Dict]:
         """Obtiene información de una sesión específica"""
@@ -157,13 +158,13 @@ class ChatDatabase:
                     'created_at': row[2],
                     'last_updated': row[3]
                 }
-            return None
+            return None  # Si no existe la sesión
     
     def save_image_to_db(self, session_id: int, image_path: str, user_name: str, emotion: str) -> int:
         """Guarda una imagen en la base de datos"""
         try:
             with open(image_path, 'rb') as f:
-                image_data = f.read()
+                image_data = f.read()  # Lee la imagen como binario
             
             return self.save_message(
                 session_id=session_id,
@@ -175,7 +176,7 @@ class ChatDatabase:
             )
         except Exception as e:
             print(f"Error guardando imagen: {e}")
-            return -1
+            return -1  # Error
     
     def get_image_data(self, message_id: int) -> Optional[bytes]:
         """Obtiene los datos de una imagen específica"""
@@ -187,4 +188,4 @@ class ChatDatabase:
             ''', (message_id,))
             
             row = cursor.fetchone()
-            return row[0] if row else None 
+            return row[0] if row else None  # Retorna los datos binarios de la imagen si existen 

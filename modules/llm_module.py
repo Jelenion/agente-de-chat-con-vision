@@ -1,11 +1,11 @@
 """
 Módulo LLM mejorado para integración local con Ollama (Llama3)
 """
-import requests
-import random
-from typing import Dict, List, Optional
-from loguru import logger
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL, USERS
+import requests  # Para hacer peticiones HTTP a la API de Ollama
+import random  # Para seleccionar respuestas de fallback aleatorias
+from typing import Dict, List, Optional  # Tipos para anotaciones
+from loguru import logger  # Logger para depuración
+from config import OLLAMA_BASE_URL, OLLAMA_MODEL, USERS  # Configuración global
 
 class LLMModule:
     """
@@ -13,9 +13,9 @@ class LLMModule:
     """
 
     def __init__(self):
-        self.base_url = OLLAMA_BASE_URL
-        self.model = OLLAMA_MODEL
-        self.logger = logger
+        self.base_url = OLLAMA_BASE_URL  # URL base de la API de Ollama
+        self.model = OLLAMA_MODEL  # Modelo por defecto
+        self.logger = logger  # Logger para mensajes
 
     def _build_prompt(self, user_id: str, emotion: str, message: str, conversation_history: List[Dict]) -> str:
         """
@@ -24,22 +24,22 @@ class LLMModule:
         # Si no hay usuario o emoción, prompt genérico
         if not user_id or not emotion:
             prompt = "Eres un asistente conversacional profesional.\nChat:\n"
-            for entry in conversation_history[-3:]:
+            for entry in conversation_history[-3:]:  # Últimos 3 turnos
                 prompt += f"Usuario: {entry['user_message']}\n"
                 prompt += f"Asistente: {entry['assistant_response']}\n"
             prompt += f"Usuario: {message}\nAsistente:"
             return prompt
 
         # Si hay usuario y emoción, prompt personalizado
-        user_config = USERS[user_id]
-        user_name = user_config["name"]
+        user_config = USERS[user_id]  # Configuración del usuario
+        user_name = user_config["name"]  # Nombre del usuario
         prompt = (
             f"Eres un asistente conversacional empático y profesional.\n"
             f"Usuario: {user_name}\n"
             f"Emoción actual: {emotion}\n\n"
             f"Chat:\n"
         )
-        for entry in conversation_history[-3:]:
+        for entry in conversation_history[-3:]:  # Últimos 3 turnos
             prompt += f"{user_name}: {entry['user_message']}\n"
             prompt += f"Asistente: {entry['assistant_response']}\n"
         prompt += f"{user_name}: {message}\nAsistente:"
@@ -49,7 +49,7 @@ class LLMModule:
         """
         Respuestas de fallback variadas según emoción.
         """
-        user_name = USERS.get(user_id, {}).get("name", "Usuario")
+        user_name = USERS.get(user_id, {}).get("name", "Usuario")  # Nombre del usuario
         fallback_responses = {
             "pensativo": [
                 f"¿Quieres contarme en qué piensas, {user_name}?",
@@ -88,7 +88,7 @@ class LLMModule:
             ]
         }
         opciones = fallback_responses.get(emotion, [f"¿En qué puedo ayudarte, {user_name}?"])
-        return random.choice(opciones)
+        return random.choice(opciones)  # Selecciona una respuesta aleatoria
 
     def generate_response(self, user_id: str, emotion: str, message: str, conversation_history: Optional[List[Dict]] = None) -> Dict:
         """
@@ -96,9 +96,9 @@ class LLMModule:
         """
         try:
             if conversation_history is None:
-                conversation_history = []
+                conversation_history = []  # Si no hay historial, lo inicializa
 
-            prompt = self._build_prompt(user_id, emotion, message, conversation_history)
+            prompt = self._build_prompt(user_id, emotion, message, conversation_history)  # Construye el prompt
 
             payload = {
                 "model": self.model,
@@ -120,11 +120,11 @@ class LLMModule:
                 timeout=30
             )
 
-            self.logger.debug(f"Respuesta cruda de Ollama: {response.text}")
+            self.logger.debug(f"Respuesta cruda de Ollama: {response.text}")  # Log de la respuesta
 
             if response.status_code == 200:
                 try:
-                    result = response.json()
+                    result = response.json()  # Intenta decodificar JSON
                 except Exception as e:
                     self.logger.error(f"Respuesta no es JSON válido: {response.text}")
                     fallback_response = self._get_fallback_response(emotion, user_id)
@@ -134,9 +134,9 @@ class LLMModule:
                         "response": fallback_response,
                         "fallback": True
                     }
-                respuesta = result.get("response", "").strip()
+                respuesta = result.get("response", "").strip()  # Extrae la respuesta
 
-                if not respuesta or not respuesta.strip():
+                if not respuesta or not respuesta.strip():  # Si la respuesta está vacía
                     fallback_response = self._get_fallback_response(emotion, user_id)
                     return {
                         "response": fallback_response,
@@ -185,7 +185,7 @@ class LLMModule:
         """
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=10)
-            return response.status_code == 200
+            return response.status_code == 200  # True si responde correctamente
         except Exception as e:
             self.logger.error(f"Error al conectar con Ollama: {e}")
             return False
@@ -199,7 +199,7 @@ class LLMModule:
             if response.status_code == 200:
                 result = response.json()
                 models = [model["name"] for model in result.get("models", [])]
-                return models
+                return models  # Lista de nombres de modelos
             else:
                 self.logger.error(f"Error al obtener modelos: {response.status_code}")
                 return []
@@ -212,9 +212,9 @@ class LLMModule:
         Cambia el modelo de Ollama local.
         """
         try:
-            available_models = self.get_available_models()
+            available_models = self.get_available_models()  # Modelos disponibles
             if new_model in available_models:
-                self.model = new_model
+                self.model = new_model  # Cambia el modelo
                 self.logger.info(f"Modelo cambiado a: {new_model}")
                 return True
             else:

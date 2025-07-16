@@ -2,15 +2,15 @@
 Módulo de visión que usa CNN local para detectar emociones
 Basado en el código de Google Colab
 """
-import os
-import numpy as np
-from PIL import Image
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
-from loguru import logger
-from typing import Dict
+import os  # Para operaciones con el sistema de archivos
+import numpy as np  # Para operaciones numéricas y de arrays
+from PIL import Image  # Para manipulación de imágenes
+from tensorflow.keras.models import load_model  # Para cargar modelos Keras
+from tensorflow.keras.preprocessing.image import img_to_array  # Para convertir imágenes a arrays
+from loguru import logger  # Logger para depuración
+from typing import Dict  # Tipos para anotaciones
 
-from config import USERS, EMOTIONS
+from config import USERS, EMOTIONS  # Configuración global
 
 class VisionModule:
     """
@@ -18,10 +18,10 @@ class VisionModule:
     """
     
     def __init__(self):
-        self.logger = logger
-        self.model = None
-        self.classes = []
-        self.img_height, self.img_width = 96, 96
+        self.logger = logger  # Logger para mensajes
+        self.model = None  # Modelo CNN (se carga después)
+        self.classes = []  # Lista de clases del modelo
+        self.img_height, self.img_width = 96, 96  # Tamaño esperado de la imagen
         
         # Cargar modelo
         self._load_models()
@@ -31,16 +31,16 @@ class VisionModule:
         Carga el modelo CNN
         """
         try:
-            model_path = "models/emotion_model.h5"
-            classes_path = "models/classes.json"
+            model_path = "models/emotion_model.h5"  # Ruta al modelo
+            classes_path = "models/classes.json"  # Ruta a las clases
             
             if os.path.exists(model_path) and os.path.exists(classes_path):
-                self.model = load_model(model_path)
+                self.model = load_model(model_path)  # Carga el modelo
                 
                 # Cargar clases del modelo
                 import json
                 with open(classes_path, 'r', encoding='utf-8') as f:
-                    self.classes = json.load(f)
+                    self.classes = json.load(f)  # Carga las clases
                 
                 self.logger.info("✅ Modelo CNN cargado correctamente")
                 self.logger.info(f"📋 Clases disponibles: {len(self.classes)}")

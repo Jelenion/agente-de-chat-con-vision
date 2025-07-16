@@ -2,14 +2,21 @@
 Módulo de visión que usa CNN local para detectar emociones
 Basado en el código de Google Colab
 """
+# Importa os para operaciones del sistema
 import os
+# Importa numpy para operaciones numéricas
 import numpy as np
+# Importa PIL para manejo de imágenes
 from PIL import Image
+# Importa funciones de Keras para cargar modelos y procesar imágenes
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import img_to_array
+# Importa logger para mensajes de depuración
 from loguru import logger
+# Importa tipos para anotaciones
 from typing import Dict
 
+# Importa configuración global de usuarios y emociones
 from config import USERS, EMOTIONS  # Configuración global
 
 class VisionModule:
@@ -23,7 +30,7 @@ class VisionModule:
         self.classes = []  # Lista de clases del modelo
         self.img_height, self.img_width = 96, 96  # Tamaño esperado de la imagen
         
-        # Cargar modelo
+        # Cargar modelo al inicializar
         self._load_models()
         
     def _load_models(self):
@@ -34,10 +41,11 @@ class VisionModule:
             model_path = "models/emotion_model.h5"  # Ruta al modelo
             classes_path = "models/classes.json"  # Ruta a las clases
             
+            # Verifica que existan los archivos del modelo y clases
             if os.path.exists(model_path) and os.path.exists(classes_path):
                 self.model = load_model(model_path)  # Carga el modelo
                 
-                # Cargar clases del modelo
+                # Cargar clases del modelo desde JSON
                 import json
                 with open(classes_path, 'r', encoding='utf-8') as f:
                     self.classes = json.load(f)  # Carga las clases
@@ -76,7 +84,7 @@ class VisionModule:
         Proceso simplificado como en el código de Colab
         """
         try:
-            # Cargar imagen
+            # Cargar imagen desde el path
             image = Image.open(image_path)
             
             # Preprocesar imagen completa (sin detectar rostros, como en Colab)
@@ -101,7 +109,7 @@ class VisionModule:
                 else:
                     return {"success": False, "error": "Error en predicción del modelo"}
             else:
-                # Fallback si no hay modelo
+                # Fallback si no hay modelo cargado
                 import random
                 emotion = random.choice(self.classes) if self.classes else "neutral"
                 confidence = random.uniform(0.6, 0.9)
@@ -222,6 +230,7 @@ class VisionModule:
 
     def train_from_emociones(self, dataset_dir='emociones', epochs=20, batch_size=32):
         """Entrena el modelo CNN usando las imágenes de la carpeta 'emociones/' y guarda el modelo y las clases. Devuelve True si tiene éxito, False si falla."""
+        # Importa librerías necesarias para entrenamiento
         import numpy as np
         from PIL import Image
         from tensorflow.keras.utils import to_categorical
@@ -231,9 +240,9 @@ class VisionModule:
         from sklearn.model_selection import train_test_split
         import json, os
 
-        IMG_SIZE = self.img_height
-        X, y = [], []
-        class_names = set()
+        IMG_SIZE = self.img_height  # Tamaño de imagen
+        X, y = [], []  # Listas para datos e índices
+        class_names = set()  # Conjunto de nombres de clases
         for root, dirs, files in os.walk(dataset_dir):
             for file in files:
                 if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif')):
@@ -247,44 +256,4 @@ class VisionModule:
                         X.append(img)
                         y.append(label)
                     except Exception as e:
-                        print(f"Error cargando {img_path}: {e}")
-
-        class_names = sorted(list(class_names))
-        if len(class_names) < 2 or len(X) < 10:
-            print("Error: Se requieren al menos 2 clases y 10 imágenes para entrenar.")
-            return False
-
-        print(f"Clases detectadas: {class_names}")
-        class_to_idx = {c: i for i, c in enumerate(class_names)}
-        y_idx = [class_to_idx[label] for label in y]
-        X = np.array(X, dtype=np.float32)
-        y = to_categorical(y_idx, num_classes=len(class_names))
-
-        try:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.15, random_state=42, stratify=y_idx
-            )
-            model = Sequential([
-                Conv2D(32, (3,3), activation='relu', input_shape=(IMG_SIZE, IMG_SIZE, 3)),
-                MaxPooling2D(2,2),
-                Conv2D(64, (3,3), activation='relu'),
-                MaxPooling2D(2,2),
-                Flatten(),
-                Dense(128, activation='relu'),
-                Dropout(0.3),
-                Dense(len(class_names), activation='softmax')
-            ])
-            model.compile(optimizer=Adam(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
-            print("Entrenando modelo...")
-            history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_test, y_test))
-            os.makedirs('models', exist_ok=True)
-            model.save('models/emotion_model.h5')
-            with open('models/classes.json', 'w', encoding='utf-8') as f:
-                json.dump(class_names, f, ensure_ascii=False, indent=2)
-            print("Modelo y clases guardados en 'models/'")
-            self.model = model
-            self.classes = class_names
-            return True
-        except Exception as e:
-            print(f"Error durante el entrenamiento: {e}")
-            return False 
+                        print(f"Error cargando {img_path}: {e}") 

@@ -2,131 +2,143 @@
 """
 Interfaz Tkinter simplificada para el Agente de Visión con Base de Datos
 """
-import tkinter as tk
-from tkinter import ttk, filedialog, scrolledtext, messagebox
-from PIL import Image, ImageTk
-import sys
-import os
-import tempfile
-from datetime import datetime
-import threading
-import re
-import time
+# Importa el módulo principal de Tkinter
+import tkinter as tk  # Importa el módulo principal de Tkinter
+# Importa widgets y utilidades de Tkinter
+from tkinter import ttk, filedialog, scrolledtext, messagebox  # Importa widgets y utilidades de Tkinter
+# Importa PIL para manejo de imágenes
+from PIL import Image, ImageTk  # Importa PIL para manejo de imágenes
+# Importa sys para manipular el path
+import sys  # Importa sys para manipular el path
+# Importa os para operaciones de sistema
+import os  # Importa os para operaciones de sistema
+# Importa tempfile para archivos temporales
+import tempfile  # Importa tempfile para archivos temporales
+# Importa datetime para manejar fechas y horas
+from datetime import datetime  # Importa datetime para manejar fechas y horas
+# Importa threading para hilos (no usado en este archivo)
+import threading  # Importa threading para hilos (no usado en este archivo)
+# Importa re para expresiones regulares
+import re  # Importa re para expresiones regulares
+# Importa time para retardos en animación de texto
+import time  # Importa time para retardos en animación de texto
 
-# Agregar el directorio actual al path
+# Agrega el directorio actual al path para importar módulos locales
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from modules.vision_module import VisionModule
-from modules.llm_module import LLMModule
-from modules.database_module import ChatDatabase
-from config import EMOTIONS, USERS
+# Importa el módulo de visión
+from modules.vision_module import VisionModule  # Importa el módulo de visión
+# Importa el módulo LLM
+from modules.llm_module import LLMModule  # Importa el módulo LLM
+# Importa el módulo de base de datos
+from modules.database_module import ChatDatabase  # Importa el módulo de base de datos
+# Importa configuraciones globales
+from config import EMOTIONS, USERS  # Importa configuraciones globales
 
 class VisionAgentChat:
     def __init__(self, root):
-        self.root = root
-        self.root.title("Agente de Visión - Chat con Base de Datos")
-        self.root.geometry("1000x700")
-        self.root.configure(bg='#f0f0f0')
+        self.root = root  # Ventana principal de Tkinter
+        self.root.title("Agente de Visión - Chat con Base de Datos")  # Título de la ventana
+        self.root.geometry("1000x700")  # Tamaño de la ventana
+        self.root.configure(bg='#f0f0f0')  # Color de fondo
         
         # Inicializar módulos
-        self.vision_module = VisionModule()
-        self.llm_module = LLMModule()
-        self.database = ChatDatabase()
+        self.vision_module = VisionModule()  # Módulo de visión
+        self.llm_module = LLMModule()  # Módulo de lenguaje
+        self.database = ChatDatabase()  # Módulo de base de datos
         
-        # Variables
-        self.current_image_path = None
-        self.current_emotion = None
-        self.current_user = None
-        self.conversation_history = []
-        self.current_session_id = None
-        self.current_session_name = None
+        # Variables de estado
+        self.current_image_path = None  # Ruta de la imagen actual
+        self.current_emotion = None  # Emoción detectada actual
+        self.current_user = None  # Usuario detectado actual
+        self.conversation_history = []  # Historial de conversación
+        self.current_session_id = None  # ID de la sesión actual
+        self.current_session_name = None  # Nombre de la sesión actual
         
-        # Crear interfaz
-        self.create_widgets()
-        self.create_menu()
+        # Crear interfaz gráfica
+        self.create_widgets()  # Crea los widgets de la interfaz
+        self.create_menu()  # Crea el menú principal
         
-        # Crear nueva sesión automáticamente
+        # Crear nueva sesión automáticamente al iniciar
         self.create_new_session()
-    
+
     def create_menu(self):
         """Crear menú principal"""
-        menubar = tk.Menu(self.root)
-        self.root.config(menu=menubar)
-        
+        menubar = tk.Menu(self.root)  # Crea la barra de menú
+        self.root.config(menu=menubar)  # Asigna la barra de menú a la ventana
         # Menú Sesiones
-        session_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Sesiones", menu=session_menu)
-        session_menu.add_command(label="Nueva Sesión", command=self.create_new_session)
-        session_menu.add_command(label="Cargar Sesión", command=self.load_session_dialog)
-        session_menu.add_command(label="Guardar Sesión Actual", command=self.save_current_session)
-        session_menu.add_separator()
-        session_menu.add_command(label="Gestionar Sesiones", command=self.manage_sessions)
-        session_menu.add_separator()
-        session_menu.add_command(label="Limpiar Base de Datos", command=self.limpiar_base_de_datos)
-        
+        session_menu = tk.Menu(menubar, tearoff=0)  # Crea el menú de sesiones
+        menubar.add_cascade(label="Sesiones", menu=session_menu)  # Agrega el menú de sesiones
+        session_menu.add_command(label="Nueva Sesión", command=self.create_new_session)  # Opción para nueva sesión
+        session_menu.add_command(label="Cargar Sesión", command=self.load_session_dialog)  # Opción para cargar sesión
+        session_menu.add_command(label="Guardar Sesión Actual", command=self.save_current_session)  # Opción para guardar sesión
+        session_menu.add_separator()  # Separador
+        session_menu.add_command(label="Gestionar Sesiones", command=self.manage_sessions)  # Opción para gestionar sesiones
+        session_menu.add_separator()  # Separador
+        session_menu.add_command(label="Limpiar Base de Datos", command=self.limpiar_base_de_datos)  # Opción para limpiar la base de datos
         # Menú Chat
-        chat_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Chat", menu=chat_menu)
-        chat_menu.add_command(label="Limpiar Chat", command=self.clear_chat)
-        chat_menu.add_command(label="Exportar Chat", command=self.export_chat)
-    
+        chat_menu = tk.Menu(menubar, tearoff=0)  # Crea el menú de chat
+        menubar.add_cascade(label="Chat", menu=chat_menu)  # Agrega el menú de chat
+        chat_menu.add_command(label="Limpiar Chat", command=self.clear_chat)  # Opción para limpiar chat
+        chat_menu.add_command(label="Exportar Chat", command=self.export_chat)  # Opción para exportar chat
+
     def create_widgets(self):
         """Crear todos los widgets de la interfaz (con tags de burbuja)."""
         # Frame principal
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame = ttk.Frame(self.root, padding="10")  # Frame principal con padding
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))  # Ubica el frame en la ventana
+        self.root.columnconfigure(0, weight=1)  # Hace que la columna principal sea expandible
+        self.root.rowconfigure(0, weight=1)  # Hace que la fila principal sea expandible
+        main_frame.columnconfigure(0, weight=1)  # Expande el frame principal
+        main_frame.rowconfigure(1, weight=1)  # Expande el frame principal
 
         # Panel izquierdo (solo info de sesión)
-        left_panel = ttk.Frame(main_frame)
-        left_panel.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))
-        session_frame = ttk.LabelFrame(left_panel, text="Sesión Actual", padding="5")
-        session_frame.grid(row=0, column=0, pady=(0, 10), sticky=(tk.W, tk.E))
-        self.session_label = ttk.Label(session_frame, text="Nueva sesión", font=("Arial", 10, "bold"))
-        self.session_label.grid(row=0, column=0)
+        left_panel = ttk.Frame(main_frame)  # Frame izquierdo
+        left_panel.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10))  # Ubica el panel izquierdo
+        session_frame = ttk.LabelFrame(left_panel, text="Sesión Actual", padding="5")  # Frame para la sesión actual
+        session_frame.grid(row=0, column=0, pady=(0, 10), sticky=(tk.W, tk.E))  # Ubica el frame de sesión
+        self.session_label = ttk.Label(session_frame, text="Nueva sesión", font=("Arial", 10, "bold"))  # Label de sesión
+        self.session_label.grid(row=0, column=0)  # Ubica el label
 
         # Panel derecho (chat)
-        right_panel = ttk.Frame(main_frame)
-        right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
-        right_panel.columnconfigure(0, weight=1)
-        right_panel.rowconfigure(0, weight=1)
+        right_panel = ttk.Frame(main_frame)  # Frame derecho
+        right_panel.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))  # Ubica el panel derecho
+        right_panel.columnconfigure(0, weight=1)  # Expande el panel derecho
+        right_panel.rowconfigure(0, weight=1)  # Expande el panel derecho
 
         # Área de chat
-        chat_frame = ttk.LabelFrame(right_panel, text="Conversación", padding="5")
-        chat_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        chat_frame.columnconfigure(0, weight=1)
-        chat_frame.rowconfigure(0, weight=1)
-        self.chat_display = scrolledtext.ScrolledText(chat_frame, wrap=tk.WORD, height=20, font=("Arial", 10))
-        self.chat_display.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        # Definir tags de burbuja
+        chat_frame = ttk.LabelFrame(right_panel, text="Conversación", padding="5")  # Frame para el chat
+        chat_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))  # Ubica el frame de chat
+        chat_frame.columnconfigure(0, weight=1)  # Expande el frame de chat
+        chat_frame.rowconfigure(0, weight=1)  # Expande el frame de chat
+        self.chat_display = scrolledtext.ScrolledText(chat_frame, wrap=tk.WORD, height=20, font=("Arial", 10))  # Área de texto con scroll
+        self.chat_display.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))  # Ubica el área de chat
+        # Definir tags de burbuja para estilos de mensajes
         self.chat_display.tag_configure("user_bubble", background="#ffe0b2", foreground="#333", justify="right", lmargin1=60, lmargin2=60, rmargin=10, spacing3=5, font=("Arial", 10, "bold"))
         self.chat_display.tag_configure("assistant_bubble", background="#e1bee7", foreground="#222", justify="left", lmargin1=10, lmargin2=10, rmargin=60, spacing3=5, font=("Arial", 10))
         self.chat_display.tag_configure("system_bubble", background="#b3e5fc", foreground="#222", justify="center", lmargin1=40, lmargin2=40, rmargin=40, spacing3=5, font=("Arial", 10, "italic"))
         self.chat_display.tag_configure("default_bubble", background="#f0f0f0", foreground="#222", justify="left", lmargin1=10, lmargin2=10, rmargin=10, spacing3=5, font=("Arial", 10))
 
         # Frame para entrada de texto y botón seleccionar imagen
-        input_frame = ttk.Frame(chat_frame)
-        input_frame.grid(row=1, column=0, sticky=(tk.W, tk.E))
-        input_frame.columnconfigure(0, weight=1)
-        self.text_input = ttk.Entry(input_frame, font=("Arial", 10))
-        self.text_input.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))
-        self.text_input.bind('<Return>', self.send_message)
-        self.send_btn = ttk.Button(input_frame, text="Enviar", command=self.send_message)
-        self.send_btn.grid(row=0, column=1, padx=(0, 5))
-        self.select_btn = ttk.Button(input_frame, text="Seleccionar Imagen", command=self.select_image)
-        self.select_btn.grid(row=0, column=2)
+        input_frame = ttk.Frame(chat_frame)  # Frame para la entrada de texto
+        input_frame.grid(row=1, column=0, sticky=(tk.W, tk.E))  # Ubica el frame de entrada
+        input_frame.columnconfigure(0, weight=1)  # Expande el campo de texto
+        self.text_input = ttk.Entry(input_frame, font=("Arial", 10))  # Campo de texto para el usuario
+        self.text_input.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))  # Ubica el campo de texto
+        self.text_input.bind('<Return>', self.send_message)  # Permite enviar con Enter
+        self.send_btn = ttk.Button(input_frame, text="Enviar", command=self.send_message)  # Botón enviar
+        self.send_btn.grid(row=0, column=1, padx=(0, 5))  # Ubica el botón enviar
+        self.select_btn = ttk.Button(input_frame, text="Seleccionar Imagen", command=self.select_image)  # Botón seleccionar imagen
+        self.select_btn.grid(row=0, column=2)  # Ubica el botón seleccionar imagen
 
         # Frame para emoción y usuario detectados debajo del chat
-        status_frame = ttk.Frame(right_panel)
-        status_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
-        status_frame.columnconfigure(0, weight=1)
-        self.emotion_label = ttk.Label(status_frame, text="Emoción: Neutral", font=("Arial", 12, "bold"))
-        self.emotion_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 2))
-        self.user_label = ttk.Label(status_frame, text="Usuario: Sin usuario", font=("Arial", 10, "bold"))
-        self.user_label.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        status_frame = ttk.Frame(right_panel)  # Frame para estado
+        status_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(10, 0))  # Ubica el frame de estado
+        status_frame.columnconfigure(0, weight=1)  # Expande el frame de estado
+        self.emotion_label = ttk.Label(status_frame, text="Emoción: Neutral", font=("Arial", 12, "bold"))  # Label de emoción
+        self.emotion_label.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 2))  # Ubica el label de emoción
+        self.user_label = ttk.Label(status_frame, text="Usuario: Sin usuario", font=("Arial", 10, "bold"))  # Label de usuario
+        self.user_label.grid(row=1, column=0, sticky=(tk.W, tk.E))  # Ubica el label de usuario
 
     def create_new_session(self):
         """Crear una nueva sesión de chat"""
@@ -250,14 +262,14 @@ class VisionAgentChat:
         self.current_session_name = session_info['name']
         self.session_label.configure(text=self.current_session_name)
         # Limpiar chat actual
-        self.chat_display.config(state='normal')
-        self.chat_display.delete(1.0, tk.END)
-        self.chat_display.config(state='disabled')
+        self.chat_display.config(state='normal')  # Habilita edición del área de chat
+        self.chat_display.delete(1.0, tk.END)  # Borra todo el chat
+        self.chat_display.config(state='disabled')  # Deshabilita edición
         # Cargar mensajes
-        self.conversation_history = []
+        self.conversation_history = []  # Reinicia historial de conversación
         for message in messages:
             if message['type'] == 'user':
-                self.add_to_chat(f"Tú: {message['content']}", "user")
+                self.add_to_chat(f"Tú: {message['content']}", "user")  # Muestra mensaje de usuario
                 self.conversation_history.append({
                     "user_message": message['content'],
                     "assistant_response": "",
@@ -265,7 +277,7 @@ class VisionAgentChat:
                     "timestamp": datetime.fromisoformat(message['timestamp'])
                 })
             elif message['type'] == 'assistant':
-                self.add_to_chat(message['content'], "assistant")
+                self.add_to_chat(message['content'], "assistant")  # Muestra mensaje del asistente
                 if self.conversation_history:
                     self.conversation_history[-1]["assistant_response"] = message['content']
             elif message['type'] == 'image':
@@ -290,8 +302,8 @@ class VisionAgentChat:
         db = ChatDatabase()
         with sqlite3.connect(db.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM chat_messages")
-            cursor.execute("DELETE FROM chat_sessions")
+            cursor.execute("DELETE FROM chat_messages")  # Borra todos los mensajes
+            cursor.execute("DELETE FROM chat_sessions")  # Borra todas las sesiones
             conn.commit()
         messagebox.showinfo("Limpieza", "La base de datos ha sido limpiada correctamente.")
     

@@ -1,10 +1,15 @@
 """
 Módulo LLM mejorado para integración local con Ollama (Llama3)
 """
+# Importa requests para peticiones HTTP a la API de Ollama
 import requests  # Para hacer peticiones HTTP a la API de Ollama
+# Importa random para respuestas de fallback aleatorias
 import random  # Para seleccionar respuestas de fallback aleatorias
+# Importa tipos para anotaciones
 from typing import Dict, List, Optional  # Tipos para anotaciones
+# Importa logger para depuración
 from loguru import logger  # Logger para depuración
+# Importa configuración global
 from config import OLLAMA_BASE_URL, OLLAMA_MODEL, USERS  # Configuración global
 
 class LLMModule:

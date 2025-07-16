@@ -35,28 +35,35 @@ class VisionModule:
         
     def _load_models(self):
         """
-        Carga el modelo CNN
+        Carga el modelo CNN. Si no existe, entrena y guarda automáticamente.
         """
         try:
             model_path = "models/emotion_model.h5"  # Ruta al modelo
             classes_path = "models/classes.json"  # Ruta a las clases
-            
+
             # Verifica que existan los archivos del modelo y clases
             if os.path.exists(model_path) and os.path.exists(classes_path):
                 self.model = load_model(model_path)  # Carga el modelo
-                
                 # Cargar clases del modelo desde JSON
                 import json
                 with open(classes_path, 'r', encoding='utf-8') as f:
                     self.classes = json.load(f)  # Carga las clases
-                
                 self.logger.info("✅ Modelo CNN cargado correctamente")
                 self.logger.info(f"📋 Clases disponibles: {len(self.classes)}")
             else:
-                self.logger.warning(f"⚠️ Modelo no encontrado en {model_path}")
-                
+                self.logger.warning(f"⚠️ Modelo no encontrado en {model_path}. Entrenando modelo nuevo...")
+                # Entrenar y guardar modelo automáticamente
+                success = self.train_from_emociones()
+                if success:
+                    self.model = load_model(model_path)
+                    import json
+                    with open(classes_path, 'r', encoding='utf-8') as f:
+                        self.classes = json.load(f)
+                    self.logger.info("✅ Modelo CNN entrenado y cargado correctamente")
+                else:
+                    self.logger.error("❌ No se pudo entrenar el modelo CNN")
         except Exception as e:
-            self.logger.error(f"❌ Error al cargar modelos: {e}")
+            self.logger.error(f"❌ Error al cargar o entrenar modelos: {e}")
     
     def _preprocess_image(self, image: Image.Image) -> np.ndarray:
         """
@@ -256,4 +263,32 @@ class VisionModule:
                         X.append(img)
                         y.append(label)
                     except Exception as e:
-                        print(f"Error cargando {img_path}: {e}") 
+                        print(f"Error cargando {img_path}: {e}")
+        if not X or not y or not class_names:
+            self.logger.error("❌ No se encontraron datos para entrenamiento.")
+            return False
+        X = np.array(X)
+        class_names = sorted(list(class_names))
+        y_idx = [class_names.index(lbl) for lbl in y]
+        y_cat = to_categorical(y_idx, num_classes=len(class_names))
+        X_train, X_val, y_train, y_val = train_test_split(X, y_cat, test_size=0.2, random_state=42)
+        # Definir modelo simple CNN
+        model = Sequential([
+            Conv2D(32, (3, 3), activation='relu', input_shape=(IMG_SIZE, IMG_SIZE, 3)),
+            MaxPooling2D((2, 2)),
+            Conv2D(64, (3, 3), activation='relu'),
+            MaxPooling2D((2, 2)),
+            Flatten(),
+            Dense(128, activation='relu'),
+            Dropout(0.5),
+            Dense(len(class_names), activation='softmax')
+        ])
+        model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
+        model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_val, y_val), verbose=2)
+        # Guardar modelo y clases
+        os.makedirs('models', exist_ok=True)
+        model.save('models/emotion_model.h5')
+        with open('models/classes.json', 'w', encoding='utf-8') as f:
+            json.dump(class_names, f, ensure_ascii=False, indent=2)
+        self.logger.info("✅ Modelo y clases guardados en 'models/'")
+        return True 

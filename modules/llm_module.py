@@ -28,10 +28,10 @@ class LLMModule:
         """
         # Si no hay usuario o emoción, prompt genérico
         if not user_id or not emotion:
-            prompt = "Eres un asistente conversacional profesional.\nChat:\n"
+            prompt = "Eres un asistente conversacional profesional.\nChat:\n"  # Prompt base
             for entry in conversation_history[-3:]:  # Últimos 3 turnos
-                prompt += f"Usuario: {entry['user_message']}\n"
-                prompt += f"Asistente: {entry['assistant_response']}\n"
+                prompt += f"Usuario: {entry['user_message']}\n"  # Mensaje del usuario
+                prompt += f"Asistente: {entry['assistant_response']}\n"  # Respuesta del asistente
             prompt += f"Usuario: {message}\nAsistente:"
             return prompt
 
@@ -45,8 +45,8 @@ class LLMModule:
             f"Chat:\n"
         )
         for entry in conversation_history[-3:]:  # Últimos 3 turnos
-            prompt += f"{user_name}: {entry['user_message']}\n"
-            prompt += f"Asistente: {entry['assistant_response']}\n"
+            prompt += f"{user_name}: {entry['user_message']}\n"  # Mensaje del usuario
+            prompt += f"Asistente: {entry['assistant_response']}\n"  # Respuesta del asistente
         prompt += f"{user_name}: {message}\nAsistente:"
         return prompt
 
@@ -106,23 +106,23 @@ class LLMModule:
             prompt = self._build_prompt(user_id, emotion, message, conversation_history)  # Construye el prompt
 
             payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
+                "model": self.model,  # Modelo a usar
+                "prompt": prompt,  # Prompt generado
+                "stream": False,  # No streaming
                 "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "max_tokens": 256,
-                    "num_predict": 100,
-                    "top_k": 40,
-                    "repeat_penalty": 1.1
+                    "temperature": 0.7,  # Temperatura de muestreo
+                    "top_p": 0.9,  # Top-p sampling
+                    "max_tokens": 256,  # Máximo de tokens
+                    "num_predict": 100,  # Tokens a predecir
+                    "top_k": 40,  # Top-k sampling
+                    "repeat_penalty": 1.1  # Penalización de repetición
                 }
             }
 
             response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                timeout=30
+                f"{self.base_url}/api/generate",  # Endpoint de generación
+                json=payload,  # Payload como JSON
+                timeout=30  # Timeout de 30 segundos
             )
 
             self.logger.debug(f"Respuesta cruda de Ollama: {response.text}")  # Log de la respuesta
@@ -131,8 +131,8 @@ class LLMModule:
                 try:
                     result = response.json()  # Intenta decodificar JSON
                 except Exception as e:
-                    self.logger.error(f"Respuesta no es JSON válido: {response.text}")
-                    fallback_response = self._get_fallback_response(emotion, user_id)
+                    self.logger.error(f"Respuesta no es JSON válido: {response.text}")  # Log de error
+                    fallback_response = self._get_fallback_response(emotion, user_id)  # Respuesta de respaldo
                     return {
                         "success": True,
                         "error": f"Respuesta no es JSON válido: {e}",
@@ -142,7 +142,7 @@ class LLMModule:
                 respuesta = result.get("response", "").strip()  # Extrae la respuesta
 
                 if not respuesta or not respuesta.strip():  # Si la respuesta está vacía
-                    fallback_response = self._get_fallback_response(emotion, user_id)
+                    fallback_response = self._get_fallback_response(emotion, user_id)  # Respuesta de respaldo
                     return {
                         "response": fallback_response,
                         "success": True,
@@ -151,13 +151,13 @@ class LLMModule:
                     }
 
                 return {
-                    "response": respuesta,
-                    "success": True,
-                    "model_used": self.model
+                    "response": respuesta,  # Respuesta generada
+                    "success": True,  # Éxito
+                    "model_used": self.model  # Modelo usado
                 }
             else:
-                self.logger.error(f"Error en Ollama API: {response.status_code}")
-                fallback_response = self._get_fallback_response(emotion, user_id)
+                self.logger.error(f"Error en Ollama API: {response.status_code}")  # Log de error
+                fallback_response = self._get_fallback_response(emotion, user_id)  # Respuesta de respaldo
                 return {
                     "success": True,
                     "error": f"Ollama API error: {response.status_code}",
@@ -166,8 +166,8 @@ class LLMModule:
                 }
 
         except requests.Timeout:
-            self.logger.error("Timeout al esperar respuesta del modelo LLM.")
-            fallback_response = self._get_fallback_response(emotion, user_id)
+            self.logger.error("Timeout al esperar respuesta del modelo LLM.")  # Log de timeout
+            fallback_response = self._get_fallback_response(emotion, user_id)  # Respuesta de respaldo
             return {
                 "success": True,
                 "error": "Timeout del modelo LLM",
@@ -175,8 +175,8 @@ class LLMModule:
                 "fallback": True
             }
         except Exception as e:
-            self.logger.error(f"Error al generar respuesta: {e}")
-            fallback_response = self._get_fallback_response(emotion, user_id)
+            self.logger.error(f"Error al generar respuesta: {e}")  # Log de error general
+            fallback_response = self._get_fallback_response(emotion, user_id)  # Respuesta de respaldo
             return {
                 "success": True,
                 "error": str(e),
@@ -189,67 +189,67 @@ class LLMModule:
         Genera una respuesta usando Ollama local (Llama3) en modo streaming (fragmentos).
         """
         if conversation_history is None:
-            conversation_history = []
-        prompt = self._build_prompt(user_id, emotion, message, conversation_history)
+            conversation_history = []  # Inicializa historial si no existe
+        prompt = self._build_prompt(user_id, emotion, message, conversation_history)  # Construye el prompt
         payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": True,
+            "model": self.model,  # Modelo a usar
+            "prompt": prompt,  # Prompt generado
+            "stream": True,  # Activa streaming
             "options": {
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "max_tokens": 256,
-                "num_predict": 100,
-                "top_k": 40,
-                "repeat_penalty": 1.1
+                "temperature": 0.7,  # Temperatura de muestreo
+                "top_p": 0.9,  # Top-p sampling
+                "max_tokens": 256,  # Máximo de tokens
+                "num_predict": 100,  # Tokens a predecir
+                "top_k": 40,  # Top-k sampling
+                "repeat_penalty": 1.1  # Penalización de repetición
             }
         }
         try:
             with requests.post(f"{self.base_url}/api/generate", json=payload, stream=True, timeout=60) as response:
-                response.raise_for_status()
-                for line in response.iter_lines(decode_unicode=True):
+                response.raise_for_status()  # Lanza excepción si hay error HTTP
+                for line in response.iter_lines(decode_unicode=True):  # Itera por fragmentos
                     if line:
                         try:
-                            data = line.strip()
+                            data = line.strip()  # Limpia línea
                             if data.startswith('{'):
                                 import json
-                                obj = json.loads(data)
-                                fragment = obj.get("response", "")
+                                obj = json.loads(data)  # Decodifica JSON
+                                fragment = obj.get("response", "")  # Extrae fragmento
                                 if fragment:
-                                    yield fragment
+                                    yield fragment  # Devuelve fragmento
                         except Exception as e:
-                            continue
+                            continue  # Ignora errores de fragmentos
         except Exception as e:
-            self.logger.error(f"Error en streaming LLM: {e}")
-            yield f"[Error en streaming: {e}]"
+            self.logger.error(f"Error en streaming LLM: {e}")  # Log de error
+            yield f"[Error en streaming: {e}]"  # Devuelve error como fragmento
 
     def test_connection(self) -> bool:
         """
         Prueba la conexión con Ollama local.
         """
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+            response = requests.get(f"{self.base_url}/api/tags", timeout=10)  # Prueba endpoint de modelos
             return response.status_code == 200  # True si responde correctamente
         except Exception as e:
-            self.logger.error(f"Error al conectar con Ollama: {e}")
-            return False
+            self.logger.error(f"Error al conectar con Ollama: {e}")  # Log de error
+            return False  # Falla la conexión
 
     def get_available_models(self) -> List[str]:
         """
         Obtiene la lista de modelos disponibles en Ollama local.
         """
         try:
-            response = requests.get(f"{self.base_url}/api/tags")
+            response = requests.get(f"{self.base_url}/api/tags")  # Solicita modelos
             if response.status_code == 200:
-                result = response.json()
-                models = [model["name"] for model in result.get("models", [])]
+                result = response.json()  # Decodifica JSON
+                models = [model["name"] for model in result.get("models", [])]  # Extrae nombres
                 return models  # Lista de nombres de modelos
             else:
-                self.logger.error(f"Error al obtener modelos: {response.status_code}")
-                return []
+                self.logger.error(f"Error al obtener modelos: {response.status_code}")  # Log de error
+                return []  # Devuelve lista vacía
         except Exception as e:
-            self.logger.error(f"Error al obtener modelos disponibles: {e}")
-            return []
+            self.logger.error(f"Error al obtener modelos disponibles: {e}")  # Log de error
+            return []  # Devuelve lista vacía
 
     def change_model(self, new_model: str) -> bool:
         """
@@ -259,11 +259,11 @@ class LLMModule:
             available_models = self.get_available_models()  # Modelos disponibles
             if new_model in available_models:
                 self.model = new_model  # Cambia el modelo
-                self.logger.info(f"Modelo cambiado a: {new_model}")
-                return True
+                self.logger.info(f"Modelo cambiado a: {new_model}")  # Log de cambio
+                return True  # Cambio exitoso
             else:
-                self.logger.error(f"Modelo {new_model} no disponible")
-                return False
+                self.logger.error(f"Modelo {new_model} no disponible")  # Log de error
+                return False  # Modelo no disponible
         except Exception as e:
-            self.logger.error(f"Error al cambiar modelo: {e}")
-            return False 
+            self.logger.error(f"Error al cambiar modelo: {e}")  # Log de error
+            return False  # Falla el cambio 

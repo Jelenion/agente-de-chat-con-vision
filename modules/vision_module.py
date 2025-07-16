@@ -3,18 +3,18 @@ Módulo de visión que usa CNN local para detectar emociones
 Basado en el código de Google Colab
 """
 # Importa os para operaciones del sistema
-import os
+import os  # Para operaciones del sistema
 # Importa numpy para operaciones numéricas
-import numpy as np
+import numpy as np  # Para operaciones numéricas
 # Importa PIL para manejo de imágenes
-from PIL import Image
+from PIL import Image  # Para manejo de imágenes
 # Importa funciones de Keras para cargar modelos y procesar imágenes
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.models import load_model  # Para cargar modelos Keras
+from tensorflow.keras.preprocessing.image import img_to_array  # Para convertir imágenes a arrays
 # Importa logger para mensajes de depuración
-from loguru import logger
+from loguru import logger  # Logger para depuración
 # Importa tipos para anotaciones
-from typing import Dict
+from typing import Dict  # Tipos para anotaciones
 
 # Importa configuración global de usuarios y emociones
 from config import USERS, EMOTIONS  # Configuración global
@@ -50,13 +50,13 @@ class VisionModule:
                 with open(classes_path, 'r', encoding='utf-8') as f:
                     self.classes = json.load(f)  # Carga las clases
                 
-                self.logger.info("✅ Modelo CNN cargado correctamente")
-                self.logger.info(f"📋 Clases disponibles: {len(self.classes)}")
+                self.logger.info("✅ Modelo CNN cargado correctamente")  # Log de éxito
+                self.logger.info(f"📋 Clases disponibles: {len(self.classes)}")  # Log de clases
             else:
-                self.logger.warning(f"⚠️ Modelo no encontrado en {model_path}")
+                self.logger.warning(f"⚠️ Modelo no encontrado en {model_path}")  # Log de advertencia
                 
         except Exception as e:
-            self.logger.error(f"❌ Error al cargar modelos: {e}")
+            self.logger.error(f"❌ Error al cargar modelos: {e}")  # Log de error
     
     def _preprocess_image(self, image: Image.Image) -> np.ndarray:
         """
@@ -65,18 +65,18 @@ class VisionModule:
         try:
             # Convertir a RGB si es necesario
             if image.mode != 'RGB':
-                image = image.convert('RGB')
+                image = image.convert('RGB')  # Convierte a RGB
             # Redimensionar exactamente a 96x96 (sin recorte)
-            image = image.resize((96, 96))
+            image = image.resize((96, 96))  # Redimensiona
             # Convertir a array y normalizar
-            image_array = img_to_array(image)
-            image_array = image_array / 255.0
+            image_array = img_to_array(image)  # Convierte a array
+            image_array = image_array / 255.0  # Normaliza
             # Agregar dimensión de batch
-            image_array = np.expand_dims(image_array, axis=0)
+            image_array = np.expand_dims(image_array, axis=0)  # Añade dimensión batch
             return image_array
         except Exception as e:
-            self.logger.error(f"Error al preprocesar imagen: {e}")
-            raise
+            self.logger.error(f"Error al preprocesar imagen: {e}")  # Log de error
+            raise  # Relanza excepción
     
     def detect_emotion(self, image_path: str) -> Dict:
         """
@@ -85,44 +85,44 @@ class VisionModule:
         """
         try:
             # Cargar imagen desde el path
-            image = Image.open(image_path)
+            image = Image.open(image_path)  # Abre la imagen
             
             # Preprocesar imagen completa (sin detectar rostros, como en Colab)
-            processed_image = self._preprocess_image(image)
+            processed_image = self._preprocess_image(image)  # Preprocesa
             
             if self.model is not None and len(self.classes) > 0:
                 # Hacer predicción (como en Colab)
-                prediction = self.model.predict(processed_image, verbose=0)
-                class_index = np.argmax(prediction[0])
+                prediction = self.model.predict(processed_image, verbose=0)  # Predice
+                class_index = np.argmax(prediction[0])  # Índice de clase
                 
                 if class_index < len(self.classes):
-                    predicted_class = self.classes[class_index]
-                    confidence = float(prediction[0][class_index])
+                    predicted_class = self.classes[class_index]  # Clase predicha
+                    confidence = float(prediction[0][class_index])  # Confianza
                     
-                    self.logger.info(f"Clase detectada: {predicted_class} (confianza: {confidence:.3f})")
+                    self.logger.info(f"Clase detectada: {predicted_class} (confianza: {confidence:.3f})")  # Log
                     
                     return {
-                        "emotion": predicted_class,
-                        "confidence": confidence,
-                        "success": True
+                        "emotion": predicted_class,  # Emoción detectada
+                        "confidence": confidence,  # Confianza
+                        "success": True  # Éxito
                     }
                 else:
-                    return {"success": False, "error": "Error en predicción del modelo"}
+                    return {"success": False, "error": "Error en predicción del modelo"}  # Error de predicción
             else:
                 # Fallback si no hay modelo cargado
                 import random
-                emotion = random.choice(self.classes) if self.classes else "neutral"
-                confidence = random.uniform(0.6, 0.9)
+                emotion = random.choice(self.classes) if self.classes else "neutral"  # Emoción aleatoria
+                confidence = random.uniform(0.6, 0.9)  # Confianza aleatoria
                 
                 return {
-                    "emotion": emotion,
-                    "confidence": confidence,
-                    "success": True
+                    "emotion": emotion,  # Emoción fallback
+                    "confidence": confidence,  # Confianza fallback
+                    "success": True  # Éxito
                 }
                 
         except Exception as e:
-            self.logger.error(f"Error al detectar emoción: {e}")
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Error al detectar emoción: {e}")  # Log de error
+            return {"success": False, "error": str(e)}  # Devuelve error
     
     def identify_user(self, image_path: str) -> Dict:
         """
@@ -130,11 +130,11 @@ class VisionModule:
         """
         try:
             # Usar la misma lógica que detect_emotion
-            result = self.detect_emotion(image_path)
+            result = self.detect_emotion(image_path)  # Predicción
             
             if result["success"]:
-                predicted_class = result["emotion"]
-                confidence = result["confidence"]
+                predicted_class = result["emotion"]  # Clase predicha
+                confidence = result["confidence"]  # Confianza
                 
                 # Determinar usuario basado en la clase predicha
                 if "abrahan" in predicted_class.lower():
@@ -148,17 +148,17 @@ class VisionModule:
                     user_name = "Desconocido"
                 
                 return {
-                    "user_id": user_id,
-                    "user_name": user_name,
-                    "confidence": confidence,
-                    "success": True
+                    "user_id": user_id,  # ID usuario
+                    "user_name": user_name,  # Nombre usuario
+                    "confidence": confidence,  # Confianza
+                    "success": True  # Éxito
                 }
             else:
-                return result
+                return result  # Devuelve error
                 
         except Exception as e:
-            self.logger.error(f"Error al identificar usuario: {e}")
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Error al identificar usuario: {e}")  # Log de error
+            return {"success": False, "error": str(e)}  # Devuelve error
     
     def process_image(self, image_path: str) -> Dict:
         """
@@ -166,13 +166,13 @@ class VisionModule:
         """
         try:
             # Hacer una sola predicción (más eficiente)
-            result = self.detect_emotion(image_path)
+            result = self.detect_emotion(image_path)  # Predicción
             if result["success"]:
-                predicted_class = result["emotion"]
-                confidence = result["confidence"]
+                predicted_class = result["emotion"]  # Clase predicha
+                confidence = result["confidence"]  # Confianza
                 # Extraer emoción real (puede venir como 'abrahan_feliz', 'jesus_triste', etc.)
-                emotion_found = None
-                pred_lower = predicted_class.lower()
+                emotion_found = None  # Inicializa emoción
+                pred_lower = predicted_class.lower()  # Minúsculas
                 # 1. Coincidencia exacta
                 if pred_lower in EMOTIONS:
                     emotion_found = pred_lower
@@ -188,7 +188,7 @@ class VisionModule:
                     if close:
                         emotion_found = close[0]
                 if not emotion_found:
-                    emotion_found = "emoción desconocida"
+                    emotion_found = "emoción desconocida"  # Fallback
                 # Determinar usuario basado en la clase predicha
                 if "abrahan" in pred_lower:
                     user_id = "abrahan"
@@ -200,18 +200,18 @@ class VisionModule:
                     user_id = "abrahan"
                     user_name = "Desconocido"
                 return {
-                    "user_id": user_id,
-                    "user_name": user_name,
-                    "user_confidence": confidence,
-                    "emotion": emotion_found,
-                    "emotion_confidence": confidence,
-                    "success": True
+                    "user_id": user_id,  # ID usuario
+                    "user_name": user_name,  # Nombre usuario
+                    "user_confidence": confidence,  # Confianza usuario
+                    "emotion": emotion_found,  # Emoción
+                    "emotion_confidence": confidence,  # Confianza emoción
+                    "success": True  # Éxito
                 }
             else:
-                return result
+                return result  # Devuelve error
         except Exception as e:
-            self.logger.error(f"Error al procesar imagen: {e}")
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Error al procesar imagen: {e}")  # Log de error
+            return {"success": False, "error": str(e)}  # Devuelve error
     
     def test_connection(self) -> bool:
         """
@@ -219,14 +219,14 @@ class VisionModule:
         """
         try:
             if self.model is not None:
-                self.logger.info("✅ Modelo CNN disponible")
-                return True
+                self.logger.info("✅ Modelo CNN disponible")  # Log de éxito
+                return True  # Modelo disponible
             else:
-                self.logger.warning("⚠️ Modelo CNN no cargado")
-                return False
+                self.logger.warning("⚠️ Modelo CNN no cargado")  # Log de advertencia
+                return False  # Modelo no disponible
         except Exception as e:
-            self.logger.error(f"Error al verificar modelo: {e}")
-            return False 
+            self.logger.error(f"Error al verificar modelo: {e}")  # Log de error
+            return False  # Devuelve False
 
     def train_from_emociones(self, dataset_dir='emociones', epochs=20, batch_size=32):
         """Entrena el modelo CNN usando las imágenes de la carpeta 'emociones/' y guarda el modelo y las clases. Devuelve True si tiene éxito, False si falla."""

@@ -107,7 +107,7 @@ class LLMModule:
                 "options": {
                     "temperature": 0.7,
                     "top_p": 0.9,
-                    "max_tokens": 80,
+                    "max_tokens": 256,
                     "num_predict": 100,
                     "top_k": 40,
                     "repeat_penalty": 1.1
@@ -178,6 +178,45 @@ class LLMModule:
                 "response": fallback_response,
                 "fallback": True
             }
+
+    def generate_response_stream(self, user_id: str, emotion: str, message: str, conversation_history: Optional[List[Dict]] = None):
+        """
+        Genera una respuesta usando Ollama local (Llama3) en modo streaming (fragmentos).
+        """
+        if conversation_history is None:
+            conversation_history = []
+        prompt = self._build_prompt(user_id, emotion, message, conversation_history)
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": True,
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "max_tokens": 256,
+                "num_predict": 100,
+                "top_k": 40,
+                "repeat_penalty": 1.1
+            }
+        }
+        try:
+            with requests.post(f"{self.base_url}/api/generate", json=payload, stream=True, timeout=60) as response:
+                response.raise_for_status()
+                for line in response.iter_lines(decode_unicode=True):
+                    if line:
+                        try:
+                            data = line.strip()
+                            if data.startswith('{'):
+                                import json
+                                obj = json.loads(data)
+                                fragment = obj.get("response", "")
+                                if fragment:
+                                    yield fragment
+                        except Exception as e:
+                            continue
+        except Exception as e:
+            self.logger.error(f"Error en streaming LLM: {e}")
+            yield f"[Error en streaming: {e}]"
 
     def test_connection(self) -> bool:
         """

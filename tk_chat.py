@@ -412,21 +412,17 @@ class VisionAgentChat:
             self._welcome_shown = True
     
     def add_streaming_response(self, response_generator):
-        """Agrega la respuesta del modelo al chat simulando escritura en vivo si es string."""
-        import time
+        """Agregar respuesta del modelo al chat, soportando string o generador."""
         self.chat_display.config(state='normal')
         pos = self.chat_display.index(tk.END)
+        # Si es un string, mostrarlo directamente
         if isinstance(response_generator, str):
-            for char in response_generator:
-                self.chat_display.insert(pos, char)
-                self.chat_display.see(tk.END)
-                self.chat_display.update_idletasks()
-                time.sleep(0.015)
+            self.chat_display.insert(pos, response_generator)
             self.chat_display.insert(tk.END, "\n\n")
             self.chat_display.config(state='disabled')
             self.root.update_idletasks()
             return response_generator
-        # Si es un generador real, usar lógica original
+        # Si es un generador, usar la lógica original
         full_text = ""
         buffer = ""
         last_shown = ""
